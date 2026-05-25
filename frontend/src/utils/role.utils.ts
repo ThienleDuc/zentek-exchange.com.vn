@@ -1,3 +1,5 @@
+import { PATHS } from "./path.utils";
+
 export const ROLE_NAMES = {
   ADMIN: 'Admin',
   SELLER: 'Seller',
@@ -39,5 +41,18 @@ export const getUserFromStorage = (): User | null => {
     return JSON.parse(userJson);
   } catch {
     return null;
+  }
+};
+
+export const getDashboardPath = (role: RoleNames | undefined): string => {
+  switch (role) {
+    case ROLE_NAMES.ADMIN:
+      return PATHS.ADMIN.DASHBOARD;
+    case ROLE_NAMES.SELLER:
+      return PATHS.Seller.DASHBOARD;
+    case ROLE_NAMES.BUYER:
+      return PATHS.Buyer.DASHBOARD;
+    default:
+      return PATHS.Buyer.DASHBOARD;
   }
 };
