@@ -11,32 +11,35 @@
 Do yêu cầu đồ án sử dụng **SQL Server (MSSQL)** thay vì MongoDB, hệ thống sử dụng stack SERN (SQL Server, Express, React, Node).
 
 ### 1.1 Frontend
-- **Framework**: **React.js** (Vite.js)
-  - *Lý do*: Build nhanh hơn Create React App, cộng đồng lớn, component-based giúp tái sử dụng UI (Product Card, Chat Bubble).
+
+- **Framework**: **React.js TypeScript + SWC** (Vite.js)
+  - _Lý do_: Build nhanh hơn Create React App, cộng đồng lớn, component-based giúp tái sử dụng UI (Product Card, Chat Bubble).
 - **Styling**: **Tailwind CSS**
-  - *Lý do*: Utility-first CSS, code giao diện nhanh, dễ maintain, không phải suy nghĩ về đặt tên class.
+  - _Lý do_: Utility-first CSS, code giao diện nhanh, dễ maintain, không phải suy nghĩ về đặt tên class.
 - **Routing**: **React Router DOM v6**
-  - *Lý do*: Chuẩn công nghiệp cho Single Page Application (SPA) trên React.
+  - _Lý do_: Chuẩn công nghiệp cho Single Page Application (SPA) trên React.
 - **State Management**: **Zustand** hoặc **Redux Toolkit**
-  - *Lý do*: Quản lý global state như thông tin user đăng nhập (Auth State) và giỏ hàng (Cart State).
+  - _Lý do_: Quản lý global state như thông tin user đăng nhập (Auth State) và giỏ hàng (Cart State).
 - **HTTP Client**: **Axios**
-  - *Lý do*: Hỗ trợ interceptors (tự động gắn JWT token vào mọi request).
+  - _Lý do_: Hỗ trợ interceptors (tự động gắn JWT token vào mọi request).
 
 ### 1.2 Backend
+
 - **Runtime**: **Node.js**
 - **Framework**: **Express.js**
-  - *Lý do*: Nhẹ, linh hoạt, rất phổ biến cho đồ án sinh viên, có rất nhiều tài liệu.
+  - _Lý do_: Nhẹ, linh hoạt, rất phổ biến cho đồ án sinh viên, có rất nhiều tài liệu.
 - **Real-time Engine**: **Socket.IO**
-  - *Lý do*: Hỗ trợ auto-reconnect, fallback sang long-polling nếu WebSocket fail, dễ dàng quản lý "Rooms" cho các tính năng chat 1-1 và chat cộng đồng.
+  - _Lý do_: Hỗ trợ auto-reconnect, fallback sang long-polling nếu WebSocket fail, dễ dàng quản lý "Rooms" cho các tính năng chat 1-1 và chat cộng đồng.
 - **File Upload**: **Multer**
-  - *Lý do*: Middleware chuẩn để xử lý multipart/form-data trong Express.
+  - _Lý do_: Middleware chuẩn để xử lý multipart/form-data trong Express.
 - **Security**: **Bcrypt** (hash password), **jsonwebtoken** (JWT auth), **CORS** (cross-origin).
 
 ### 1.3 Database
+
 - **RDBMS**: **Microsoft SQL Server (MSSQL)**
-  - *Lý do*: Yêu cầu bắt buộc/được chỉ định của môn học, tính toàn vẹn dữ liệu cao (ACID), mạnh mẽ trong các query quan hệ (quan trọng cho Orders, Products).
+  - _Lý do_: Yêu cầu bắt buộc/được chỉ định của môn học, tính toàn vẹn dữ liệu cao (ACID), mạnh mẽ trong các query quan hệ (quan trọng cho Orders, Products).
 - **Driver**: **mssql** package (hoặc ORM như **Sequelize** / **Prisma**)
-  - *Khuyến nghị*: Sử dụng package `mssql` thuần kết hợp Stored Procedures (nếu yêu cầu đồ án gắt gao về SQL) hoặc **Prisma** (ORM hiện đại, type-safe) nếu được phép.
+  - _Khuyến nghị_: Sử dụng package `mssql` thuần kết hợp Stored Procedures (nếu yêu cầu đồ án gắt gao về SQL) hoặc **Prisma** (ORM hiện đại, type-safe) nếu được phép.
 
 ---
 
