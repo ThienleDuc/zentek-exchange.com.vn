@@ -14,9 +14,6 @@ export const NAV_ITEMS = {
 
 } as const;
 
-/**
- * Phân quyền hiển thị menu theo vai trò
- */
 export const ROLE_NAV_ITEMS: Record<RoleNames, NavItem[]> = {
   [ROLE_NAMES.ADMIN]: [
 

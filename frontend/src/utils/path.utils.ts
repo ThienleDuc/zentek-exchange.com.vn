@@ -2,21 +2,22 @@ import { ROLE_NAMES, type RoleNames } from "./role.utils";
 
 export const PATHS = {
   AUTH: {
-    LOGIN: '/login',
-    REGISTER: '/register',
-    PROFILE: '/profile',
-    SETTINGS: '/settings',
-    UNAUTHORIZED: '/unauthorized',
+    LOGIN: '/dang-nhap',
+    REGISTER: '/dang-ky',
+    REGISTER_SELLER: '/dang-ky-nguoi-ban',
+    PROFILE: '/ho-so',
+    SETTINGS: '/cai-dat',
+    UNAUTHORIZED: '/khong-du-quyen',
     FORBIDDEN: '/403',
-    NOT_FOUND: '/*',
+    NOT_FOUND: '/khong-tim-thay',
   },
   // Seller
   Seller: {
-    DASHBOARD: '/seller'
+    DASHBOARD: '/'
   },
   // Buyer
   Buyer: {
-    DASHBOARD: '/buyer'
+    DASHBOARD: '/'
   },
   // Nhóm Admin
   ADMIN: {

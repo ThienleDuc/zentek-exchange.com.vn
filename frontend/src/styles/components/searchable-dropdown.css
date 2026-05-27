@@ -1,0 +1,120 @@
+/* frontend/src/styles/components/searchable-dropdown.css */
+
+.searchable-dropdown-container {
+  position: relative;
+  width: 100%;
+}
+
+.searchable-dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.6875rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  background-color: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.searchable-dropdown-header.error {
+  border-color: var(--danger);
+}
+
+.searchable-dropdown-header:hover:not(.disabled) {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.searchable-dropdown-header.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.searchable-dropdown-icon {
+  color: rgba(255, 255, 255, 0.4);
+  transition: transform var(--transition-fast);
+}
+
+.searchable-dropdown-header.open .searchable-dropdown-icon {
+  transform: rotate(180deg);
+}
+
+.searchable-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background-color: #1f2937; /* Dark background */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.searchable-dropdown-search-wrapper {
+  padding: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.searchable-dropdown-search {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  color: #ffffff;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.searchable-dropdown-search:focus {
+  border-color: var(--primary);
+}
+
+.searchable-dropdown-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+
+/* Tùy chỉnh thanh cuộn cho list */
+.searchable-dropdown-list::-webkit-scrollbar {
+  width: 6px;
+}
+.searchable-dropdown-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+.searchable-dropdown-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+.searchable-dropdown-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.searchable-dropdown-item {
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.searchable-dropdown-item:hover, .searchable-dropdown-item.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.searchable-dropdown-empty {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+}

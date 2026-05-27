@@ -1,6 +1,8 @@
 import { type RouteObject } from 'react-router-dom';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
+import RegisterSeller from '../pages/auth/RegisterSeller';
+import { PATHS } from '../utils/path.utils';
 
 export type CustomRouteObject = RouteObject & {
   isPublic?: boolean;
@@ -8,16 +10,20 @@ export type CustomRouteObject = RouteObject & {
 
 const allRoutes: CustomRouteObject[] = [
   {
-    path: '/login',
+    path: PATHS.AUTH.LOGIN,
     element: <Login />,
     isPublic: true
   },
   {
-    path: '/register',
+    path: PATHS.AUTH.REGISTER,
     element: <Register />,
     isPublic: true
+  },
+  {
+    path: PATHS.AUTH.REGISTER_SELLER,
+    element: <RegisterSeller />,
+    isPublic: true
   }
-  // Các Private Routes sẽ thêm sau với `isPublic: false`
 ];
 
 // Public routes (không cần đăng nhập)

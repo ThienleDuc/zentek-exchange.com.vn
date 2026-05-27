@@ -13,9 +13,11 @@
 
 **Là** một khách truy cập, **Tôi muốn** đăng ký một tài khoản mới **Để** có thể mua hàng hoặc trao đổi trên hệ thống.
 
-- **AC1**: Form đăng ký yêu cầu: Tên đăng nhập, Email, Họ tên, Số điện thoại, Mật khẩu, Xác nhận mật khẩu.
+- **AC1**: Form đăng ký yêu cầu: Tên đăng nhập, Email, Họ tên, Mật khẩu, Xác nhận mật khẩu, xác thực otp.
 - **AC2**: Xác nhận mật khẩu phải khớp với mật khẩu. Mật khẩu phải được mã hóa (bcrypt) trước khi lưu.
-- **AC3**: Email và Tên đăng nhập, Số điện thoại phải là unique. Hệ thống báo lỗi nếu trùng.
+- **AC3**: Email và Tên đăng nhập phải là unique. Hệ thống báo lỗi nếu trùng.
+- **AC4**: Sau khi submit form đăng ký, hệ thống gửi mã OTP đến Email của người dùng và user chuyển sang trang xác thực OTP.
+- **AC5**: Người dùng nhập mã OTP để xác thực tài khoản và hoàn tất đăng ký.
 
 ### AUTH-02: Đăng nhập/Đăng xuất
 
@@ -47,9 +49,8 @@
 
 **Là** một NguoiBanHang, **Tôi muốn** đăng ký thông tin cửa hàng **Để** bắt đầu đăng bán sản phẩm.
 
-- **AC1**: Form yêu cầu: Tên cửa hàng, Mô tả, Địa chỉ chi tiết (Tỉnh/Huyện/Phường).
-- **AC2**: Tên cửa hàng phải là unique.
-- **AC3**: Sau khi lưu thành công, user chính thức có cửa hàng và truy cập được Dashboard người bán.
+- **AC1**: Form yêu cầu: Tên đăng nhập, Email, Họ tên, Mật khẩu, Xác nhận mật khẩu, xác thực otp. Tên cửa hàng, Mô tả, Tỉnh thành, Quận huyện, Xã phường, địa chỉ chi tiết, số điện thoại, Loại hình cửa hàng, Mã số thuế, Giấy phép kinh doanh.
+- **AC2**: Sau khi lưu thành công, user chính thức có cửa hàng và truy cập được Dashboard người bán.
 
 ### SHOP-02: Trang cửa hàng công khai
 

@@ -17,10 +17,10 @@ const AppRoutes = () => {
       ...route,
       element: <PrivateRoute>{route.element}</PrivateRoute>
     })),
-    
+
     // Redirect "/" về trang chính
-    { path: "/", element: <Navigate to="/theo-doi-ke-hoach" replace /> },
-    
+    { path: "/", element: <Navigate to="/" replace /> },
+
     // 404 Not Found
     { path: PATHS.AUTH.NOT_FOUND, element: <div>404 Not Found</div> }
   ];

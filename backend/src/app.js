@@ -18,9 +18,9 @@ app.get('/', (req, res) => {
   res.send('ZenTek Exchange API is running...');
 });
 
-// TODO: Import and use API routes here
-// const apiRoutes = require('./routes');
-// app.use('/api', apiRoutes);
+// Import and use API routes
+const apiRoutes = require('./routes');
+app.use('/api', apiRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

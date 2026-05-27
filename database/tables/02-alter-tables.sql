@@ -7,7 +7,7 @@ ALTER TABLE NguoiDung ADD CONSTRAINT FK_NguoiDung_VaiTro FOREIGN KEY (VaiTroId) 
 
 -- CuaHang
 ALTER TABLE CuaHang ADD CONSTRAINT FK_CuaHang_NguoiDung FOREIGN KEY (NguoiBanId) REFERENCES NguoiDung(MaNguoiDung);
-
+ALTER TABLE CuaHang ADD CONSTRAINT CK_CuaHang_LoaiHinh CHECK (LoaiHinhCuaHang IN (1, 2, 3)); -- 1: Cá nhân 2: Hộ kinh doanh 3: Doanh nghiệp nhỏ
 -- DanhMuc
 ALTER TABLE DanhMuc ADD CONSTRAINT FK_DanhMuc_DanhMucCha FOREIGN KEY (DanhMucChaId) REFERENCES DanhMuc(MaDanhMuc);
 
