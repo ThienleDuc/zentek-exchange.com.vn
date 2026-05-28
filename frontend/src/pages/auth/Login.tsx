@@ -59,7 +59,11 @@ const Login: React.FC = () => {
       if (response.success && response.token && response.user) {
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
-        navigate('/');
+        
+        // Use getDashboardPath to navigate dynamically based on role
+        const { getDashboardPath } = await import('../../utils/role.utils');
+        const userRole = response.user.roleName;
+        navigate(getDashboardPath(userRole as any));
       } else {
         setErrors(prev => ({ ...prev, form: response.message || 'Đăng nhập thất bại. Vui lòng thử lại.' }));
       }
@@ -79,7 +83,7 @@ const Login: React.FC = () => {
         </header>
         
         <form onSubmit={handleSubmit} className="space-y-5 mt-4">
-          <fieldset className="border-none p-0 m-0">
+          <fieldset className="border-none p-0 m-0 mb-4">
             <label className="login-label">Tên đăng nhập hoặc Email *</label>
             <div className="input-with-icon">
               <Mail className="input-icon-left" size={18} />
@@ -102,7 +106,7 @@ const Login: React.FC = () => {
             )}
           </fieldset>
 
-          <fieldset className="border-none p-0 m-0">
+          <fieldset className="border-none p-0 m-0 mb-4">
             <label className="login-label">Mật khẩu *</label>
             <div className="input-with-icon">
               <Lock className="input-icon-left" size={18} />

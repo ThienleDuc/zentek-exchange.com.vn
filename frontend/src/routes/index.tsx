@@ -1,29 +1,19 @@
-import { type RouteObject } from 'react-router-dom';
-import Login from '../pages/auth/Login';
-import Register from '../pages/auth/Register';
-import RegisterSeller from '../pages/auth/RegisterSeller';
-import { PATHS } from '../utils/path.utils';
+import { authRoutes } from './features/auth/auth.routes';
+import { adminRoutes } from './features/admin/admin.routes';
+import { buyerRoutes } from './features/buyer/buyer.routes';
+import { sellerRoutes } from './features/seller/seller.routes';
+import { publicFeatureRoutes } from './features/public/public.routes';
+import { type CustomRouteObject } from './types';
 
-export type CustomRouteObject = RouteObject & {
-  isPublic?: boolean;
-};
+// Re-export type để tương thích ngược nếu các file khác đang import từ index.tsx
+export type { CustomRouteObject };
 
 const allRoutes: CustomRouteObject[] = [
-  {
-    path: PATHS.AUTH.LOGIN,
-    element: <Login />,
-    isPublic: true
-  },
-  {
-    path: PATHS.AUTH.REGISTER,
-    element: <Register />,
-    isPublic: true
-  },
-  {
-    path: PATHS.AUTH.REGISTER_SELLER,
-    element: <RegisterSeller />,
-    isPublic: true
-  }
+  ...publicFeatureRoutes,
+  ...authRoutes,
+  ...adminRoutes,
+  ...buyerRoutes,
+  ...sellerRoutes
 ];
 
 // Public routes (không cần đăng nhập)

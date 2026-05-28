@@ -1,0 +1,57 @@
+/* category-nav.css */
+
+.category-nav {
+  /* Fix layout bugs with dropdowns */
+  position: relative;
+}
+
+/* Hover trigger for the main category dropdown */
+.category-dropdown-wrapper:hover .category-dropdown-menu,
+.category-dropdown-wrapper:hover ~ .category-overlay {
+  display: block;
+  animation: fadeInDown 0.2s ease-out forwards;
+}
+
+/* Submenu layout */
+.category-submenu {
+  display: none;
+}
+
+/* Show submenu when hovering over a level 1 item */
+.category-item-level1:hover .category-submenu {
+  display: block;
+  animation: fadeInRight 0.2s ease-out forwards;
+}
+
+/* Keep the level 1 item highlighted when hovering its submenu */
+.category-item-level1:hover > div {
+  background-color: white;
+  color: #2563eb; /* text-blue-600 */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+.category-item-level1:hover > div svg {
+  color: #2563eb;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+

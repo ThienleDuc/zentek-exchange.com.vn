@@ -8,4 +8,12 @@
 
 /* -- COMPONENTS -- */
 @import './components/searchable-dropdown.css';
+@import './components/header.css';
+@import './components/footer.css';
+@import './components/admin-sidebar.css';
+@import './components/seller-sidebar.css';
 
+/* -- LAYOUTS -- */
+@import './layouts/AdminLayout.css';
+@import './layouts/SellerLayout.css';
+@import './components/category-nav.css';

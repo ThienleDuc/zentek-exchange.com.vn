@@ -1,24 +1,41 @@
 :root {
   /* --- Brand & Theme Colors (UX/UI Brief) --- */
-  --primary: #2563eb;       /* Blue 600 - Primary buttons, links */
-  --primary-hover: #1d4ed8; /* Blue 700 - Hover state for primary */
-  --secondary: #059669;     /* Emerald 600 - Success notifications */
-  --secondary-hover: #047857;
-  --danger: #dc2626;        /* Red 600 - Errors/Validation alerts */
-  --danger-hover: #b91c1c;
-  --warning: #f59e0b;       /* Amber 500 - Warning states */
+  --primary: #2563eb;       /* Xanh (Blue) */
+  --color-primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --color-primary-hover: #1d4ed8;
+  --accent: #ff4d4f;        /* Đỏ cam (Orange Red) - Accent/Highlight */
+  --color-accent: #ff4d4f;
+  --secondary: #10b981;     /* Xanh lá (Green) - Success notifications */
+  --color-secondary: #10b981;
+  --secondary-hover: #059669;
+  --color-secondary-hover: #059669;
+  --danger: #ef4444;        /* Đỏ (Red) - Errors/Validation alerts */
+  --color-danger: #ef4444;
+  --danger-hover: #dc2626;
+  --color-danger-hover: #dc2626;
+  --warning: #f59e0b;       /* Vàng (Yellow) - Warning states */
+  --color-warning: #f59e0b;
   --info: #3b82f6;          /* Blue 500 - Information states */
+  --color-info: #3b82f6;
 
   /* --- Surface & Layout Backgrounds --- */
-  --background: #f9fafb;    /* Gray 50 - Main page background */
+  --background: #fff5f5;    /* Trắng hồng (Pinkish-white) - Main page background */
+  --color-background: #fff5f5;
   --surface: #ffffff;       /* White - Card backgrounds, panels */
-  --surface-muted: #f3f4f6; /* Gray 100 - Sub-panels, disabled areas */
+  --color-surface: #ffffff;
+  --surface-muted: #f3f4f6; /* Xám nhạt (Light Gray) - Sub-panels */
+  --color-surface-muted: #f3f4f6;
 
   /* --- Text & Content Colors --- */
-  --text-main: #111827;     /* Gray 900 - High contrast text (headings) */
-  --text-body: #374151;     /* Gray 800 - Standard body copy */
-  --text-muted: #6b7280;    /* Gray 500 - Captions, placeholders, subtitles */
-  --text-light: #9ca3af;    /* Gray 400 - Disabled text, subtle labels */
+  --text-main: #000000;     /* Đen (Black) - High contrast text (headings) */
+  --color-text-main: #000000;
+  --text-body: #4b5563;     /* Xám (Gray) - Standard body copy */
+  --color-text-body: #4b5563;
+  --text-muted: #6b7280;    /* Xám (Gray) - Captions, placeholders */
+  --color-text-muted: #6b7280;
+  --text-light: #9ca3af;    /* Xám nhạt - Disabled text */
+  --color-text-light: #9ca3af;
   --text-on-primary: #ffffff;
   --text-on-secondary: #ffffff;
   --text-on-danger: #ffffff;
@@ -52,6 +69,7 @@
 @theme {
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
   --color-secondary: var(--secondary);
   --color-secondary-hover: var(--secondary-hover);
   --color-danger: var(--danger);

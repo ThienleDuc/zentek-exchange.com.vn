@@ -8,14 +8,16 @@ import { storage } from '../utils/storage.utils';
 
 interface PublicRouteProps {
   children: React.ReactNode;
+  isGuestOnly?: boolean;
 }
 
 const PublicRoute: React.FC<PublicRouteProps> = ({ 
-  children
+  children,
+  isGuestOnly = false
 }) => {
   const isAuthenticated = !!storage.getToken();
   
-  if (isAuthenticated) {
+  if (isAuthenticated && isGuestOnly) {
     const user = getUserFromStorage();
     
     const dashboardPath = getDashboardPath(user?.roleName as RoleNames);

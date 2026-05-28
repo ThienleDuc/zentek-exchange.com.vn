@@ -9,17 +9,15 @@ const AppRoutes = () => {
     // Public Routes
     ...publicRoutes.map(route => ({
       ...route,
-      element: <PublicRoute>{route.element}</PublicRoute>
+      element: <PublicRoute isGuestOnly={route.isGuestOnly}>{route.element}</PublicRoute>
     })),
     
     // Private Routes
     ...privateRoutes.map(route => ({
       ...route,
-      element: <PrivateRoute>{route.element}</PrivateRoute>
+      element: <PrivateRoute allowedRoles={route.allowedRoles}>{route.element}</PrivateRoute>
     })),
 
-    // Redirect "/" về trang chính
-    { path: "/", element: <Navigate to="/" replace /> },
 
     // 404 Not Found
     { path: PATHS.AUTH.NOT_FOUND, element: <div>404 Not Found</div> }

@@ -9,29 +9,37 @@ export const ROLE_NAMES = {
 export type RoleNames = typeof ROLE_NAMES[keyof typeof ROLE_NAMES];
 
 export interface User {
-  tenDangNhap: string;
-  hoTen: string;
+  id: string | number;
+  username: string;
+  fullName: string;
   email: string;
-  role: string;
-  roleName?: string;
-  avatar?:string
+  roleName: string;
+  role?: string; // Tương thích ngược nếu cần
+  phone?: string;
+  avatar?: string;
+  createdAt?: string;
 }
 
 export const isAdmin = (user?: User | null): boolean => {
-  return user?.roleName === ROLE_NAMES.ADMIN;
+  const role = user?.roleName || user?.role;
+  return role?.toUpperCase() === ROLE_NAMES.ADMIN.toUpperCase();
 };
 
 export const isSeller = (user?: User | null): boolean => {
-  return user?.roleName === ROLE_NAMES.SELLER;
+  const role = user?.roleName || user?.role;
+  return role?.toUpperCase() === ROLE_NAMES.SELLER.toUpperCase();
 };
 
 export const isBuyer = (user?: User | null): boolean => {
-  return user?.roleName === ROLE_NAMES.BUYER;
+  const role = user?.roleName || user?.role;
+  return role?.toUpperCase() === ROLE_NAMES.BUYER.toUpperCase();
 };
 
 export const hasAnyRole = (user: User | null, allowedRoles: RoleNames[]) => {
-  if (!user || !user.roleName) return false;
-  return allowedRoles.map(role => role.toUpperCase()).includes(user.roleName.toUpperCase());
+  if (!user) return false;
+  const userRole = (user.roleName || user.role)?.trim();
+  if (!userRole) return false;
+  return allowedRoles.map(role => role.toUpperCase()).includes(userRole.toUpperCase());
 };
 
 export const getUserFromStorage = (): User | null => {
@@ -51,8 +59,8 @@ export const getDashboardPath = (role: RoleNames | undefined): string => {
     case ROLE_NAMES.SELLER:
       return PATHS.Seller.DASHBOARD;
     case ROLE_NAMES.BUYER:
-      return PATHS.Buyer.DASHBOARD;
+      return '/';
     default:
-      return PATHS.Buyer.DASHBOARD;
+      return '/';
   }
 };

@@ -40,7 +40,7 @@ INSERT INTO
     )
 VALUES (
         'admin',
-        '$2b$10$EPb15XJcO9t8dZpYp2fM2uH2K2H/Tf9T8h2G6P7p9G8e4p5eY8F4G', -- Mã băm của "123456"
+        '$2b$10$ZtnzXyZQ.mEXFmVPFTxJ0ezMw9f823XmbPDh2WVgeITK7BtXNgt9W', -- Mã băm của "123456"
         'admin@zentek.com',
         N'Quản trị viên',
         '0999999999',

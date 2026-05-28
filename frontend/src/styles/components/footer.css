@@ -1,0 +1,4 @@
+/* CSS dành riêng cho Footer */
+.footer-container {
+  display: block; /* Dummy style để tránh empty ruleset */
+}

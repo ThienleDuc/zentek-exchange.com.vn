@@ -18,11 +18,20 @@
 ### 2.1 Color Palette
 | Token | Hex | Sử dụng |
 |-------|-----|---------|
-| **Primary** | `#2563EB` (Blue 600) | Buttons chính, links |
-| **Secondary** | `#059669` (Emerald 600) | Thông báo thành công |
-| **Danger** | `#DC2626` (Red 600) | Thông báo lỗi (Validation error) |
+| **Primary** | `#2563eb` (Xanh/Blue) | Buttons chính, links, menu chủ đạo |
+| **Accent** | `#ff4d4f` (Đỏ cam) | Làm điểm nhấn, button nổi bật |
+| **Secondary** | `#10b981` (Xanh lá) | Thông báo thành công |
+| **Warning** | `#f59e0b` (Vàng) | Thông báo cảnh báo |
+| **Danger** | `#ef4444` (Đỏ) | Thông báo lỗi (Validation error) |
 | **Surface** | `#FFFFFF` | Form Card background, Panel |
-| **Background** | `#F9FAFB` (Gray 50) | Page background chung |
+| **Background** | `#fff5f5` (Trắng hồng) | Page background chung toàn web |
+| **Text Main** | `#000000` (Đen) | Tiêu đề chính, Text đậm |
+| **Text Body** | `#4b5563` (Xám) | Chữ cơ bản |
+
+### 2.2 Typography (Font chữ)
+- **Font chủ đạo**: `Inter`, `system-ui`, `sans-serif`.
+- **Cảm giác (Vibe)**: Hiện đại, bo cong mềm mại, thân thiện với mắt người dùng.
+- Kích thước chữ tiêu chuẩn từ `14px` đến `16px`.
 
 ---
 

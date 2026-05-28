@@ -13,16 +13,25 @@ export const PATHS = {
   },
   // Seller
   Seller: {
-    DASHBOARD: '/'
+    ROOT: '/seller',
+    DASHBOARD: '/seller/dashboard',
+    SHOP: '/seller/cua-hang'
   },
   // Buyer
   Buyer: {
-    DASHBOARD: '/'
+    ROOT: '/buyer',
+    DASHBOARD: '/buyer/dashboard',
+    ORDERS: '/buyer/don-mua',
+    MESSAGES: '/buyer/tin-nhan',
+    NOTIFICATIONS: '/buyer/thong-bao'
   },
   // Nhóm Admin
   ADMIN: {
+    ROOT: '/admin',
     DASHBOARD: '/admin/dashboard',
     USER_MANAGEMENT: '/admin/users',
+    SHOP_MANAGEMENT: '/admin/shops',
+    PRODUCT_MANAGEMENT: '/admin/products',
   }
 } as const;
 
@@ -32,12 +41,18 @@ export const PATHS = {
 export const ROLE_ALLOWED_PATHS: Record<RoleNames, string[]> = {
   [ROLE_NAMES.ADMIN]: [
     PATHS.ADMIN.DASHBOARD,
+    PATHS.ADMIN.USER_MANAGEMENT,
+    PATHS.ADMIN.SHOP_MANAGEMENT,
+    PATHS.ADMIN.PRODUCT_MANAGEMENT,
   ],
   [ROLE_NAMES.SELLER]: [
     PATHS.Seller.DASHBOARD,
   ],
   [ROLE_NAMES.BUYER]: [
-    PATHS.Buyer.DASHBOARD
+    PATHS.Buyer.DASHBOARD,
+    PATHS.Buyer.ORDERS,
+    PATHS.Buyer.MESSAGES,
+    PATHS.Buyer.NOTIFICATIONS
   ]
 };
 
