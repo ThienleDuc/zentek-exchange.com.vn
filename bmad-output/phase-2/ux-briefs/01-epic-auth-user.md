@@ -54,3 +54,49 @@ Real-time Validation (Kiểm tra lỗi trực tiếp): Thực hiện kiểm tra 
    Kiểm tra xem mật khẩu có thể ẩn/hiện khi bấm icon mắt [👁].
    Thử nhập sai định dạng email, sđt hoặc để trống các trường bắt buộc rồi click ra ngoài để xác thực real-time báo lỗi đỏ trực quan bên dưới trường đó.
    Thử submit form và kiểm tra trạng thái vô hiệu hóa (disabled) của nút bấm cùng biểu tượng loading spinner.
+
+---
+
+# Quản lý Người dùng (User Management)
+
+Tính năng này cung cấp giao diện quản trị để xem danh sách, tìm kiếm, sửa, xóa và cấp lại mật khẩu cho người dùng.
+
+🎨 Ý tưởng thiết kế (Design Concept)
+- **Bố cục Toàn màn hình (Full-height Layout):** Trang thiết lập chiều cao tối thiểu `min-h-screen` (100vh), được chia làm 2 phần rõ rệt:
+  - **Phần 1 (Phía trên):** Khu vực thống kê hiển thị các biểu đồ (sử dụng thư viện biểu đồ ReactJS) giúp admin nắm bắt lượng người dùng mới, tỷ lệ các vai trò.
+  - **Phần 2 (Phía dưới):** Khu vực hiển thị bảng dữ liệu danh sách người dùng chi tiết.
+- **Phong cách Kính mờ (Dark Glassmorphism) & Tone màu Slate:** Trang quản lý được chia làm 2 Card (Khối) lớn bao bọc Biểu đồ và Bảng. Cả 2 Card sử dụng tone màu Slate tối (`bg-slate-900/70`), viền kính mờ đục (`backdrop-blur-md`) và đổ bóng đổ để nổi bật hoàn toàn trên nền layout `slate-800`.
+- **Màu sắc & Trạng thái (Colors & States):** Sử dụng các huy hiệu (badges) màu sắc neon để phân biệt vai trò (Admin: Đỏ, Seller: Xanh lá, Buyer: Xanh lam) giúp quản trị viên dễ dàng nhận diện.
+- **Tương tác trực quan:** Các nút hành động (Xem, Sửa, Xoá) sử dụng icon từ `lucide-react` với hiệu ứng hover glow sáng rực lên tương ứng với hành động (Xoá -> Đỏ, Xem -> Xanh lam, Sửa -> Vàng).
+- **Modal Kính mờ (Glass Modal):** Modal xem chi tiết người dùng sẽ hiển thị dưới dạng pop-up kính mờ ở trung tâm, hiệu ứng fade-in mượt mà.
+
+🛠️ Các thay đổi đề xuất (Proposed Changes)
+
+1. Giao diện Styles (Sử dụng Tailwind CSS)
+   - Đồng bộ màu nền của `AdminLayout` thành `#1e293b` (slate-800) khớp với Sidebar và Footer.
+   - Định dạng 2 Card hiển thị với nền `slate-900` bán trong suốt.
+   - Tạo hiệu ứng hover nhẹ (`hover:bg-slate-700/30`) cho từng hàng trong bảng.
+   - Bo góc mềm mại cho bảng (`rounded-xl`), kết hợp với bóng đổ (`shadow-2xl`) để tạo chiều sâu.
+
+2. Thành phần React (React Components)
+   [NEW] `UserManagement.tsx`
+   - Bố cục trang chia làm 2 khối Card. 
+   - **Card 1 (Tổng quan Thống kê):** Tích hợp thư viện biểu đồ `recharts` để vẽ Pie Chart (Tỷ lệ vai trò) và Bar Chart (Đăng ký mới 7 ngày).
+   - **Card 2 (Danh sách Người dùng):** Chứa Tiêu đề, thanh tìm kiếm, nút "Thêm mới" và bảng dữ liệu.
+   - Ô tìm kiếm tích hợp icon kính lúp, viền sẽ phát sáng (`ring-blue-500`) khi đang nhập liệu để tăng độ tập trung (focus).
+   - Bảng dữ liệu hiển thị các cột: Tài khoản, Liên hệ, Vai trò, Ngày tạo, Thao tác.
+   - Tích hợp component `Pagination.tsx` ở cuối bảng để điều hướng trang.
+   
+   [NEW] `UserDetailModal.tsx`
+   - Bố cục lưới 2 cột gọn gàng để hiển thị thông tin cá nhân.
+   - Nút "Cấp lại mật khẩu ngẫu nhiên" (icon Key): Khi thành công sẽ hiện khung viền xanh lá (success alert) chứa mật khẩu mới nổi bật, kèm text gợi ý copy gửi cho người dùng.
+   
+   [NEW] `Pagination.tsx`
+   - Cung cấp các nút chuyển trang (Prev, Next, Số trang) dạng nút bấm bo góc. Nút trang hiện tại sẽ được đổ màu nổi bật.
+
+🔍 Kế hoạch kiểm thử & Xác minh (Verification Plan)
+- Đảm bảo bảng hiển thị tốt, không bị vỡ bố cục trên màn hình nhỏ (tích hợp thanh cuộn ngang `overflow-x-auto`).
+- Kiểm tra hiệu ứng hover trên từng hàng và các nút thao tác có đổi màu sắc phản hồi ngay lập tức.
+- Thử nghiệm tìm kiếm, đảm bảo ô tìm kiếm có hiệu ứng focus rõ ràng.
+- Mở Modal xem chi tiết và nhấp "Cấp lại mật khẩu", đảm bảo thông báo mật khẩu mới hiển thị rõ ràng, nổi bật.
+- Khi bấm Xoá, hộp thoại xác nhận hiện ra với nội dung cảnh báo chính xác (rằng tài khoản và cửa hàng tương ứng sẽ bị vô hiệu hoá - Soft Delete).

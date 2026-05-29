@@ -65,6 +65,27 @@
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.dark {
+  --background: #1e293b;    /* slate-800 - Main page background */
+  --color-background: #1e293b;
+  --surface: #0f172a;       /* slate-900 - Card backgrounds */
+  --color-surface: #0f172a;
+  --surface-muted: #1e293b; /* slate-800 - Sub-panels */
+  --color-surface-muted: #1e293b;
+
+  --text-main: #ffffff;     /* White - High contrast text (headings) */
+  --color-text-main: #ffffff;
+  --text-body: #cbd5e1;     /* slate-300 - Standard body copy */
+  --color-text-body: #cbd5e1;
+  --text-muted: #94a3b8;    /* slate-400 - Captions, placeholders */
+  --color-text-muted: #94a3b8;
+  --text-light: #64748b;    /* slate-500 - Disabled text */
+  --color-text-light: #64748b;
+
+  --border: #334155;        /* slate-700 - Default layout borders */
+  --border-dark: #475569;   /* slate-600 - Interactive borders */
+}
+
 /* --- Tailwind CSS v4 Theme Extension --- */
 @theme {
   --color-primary: var(--primary);

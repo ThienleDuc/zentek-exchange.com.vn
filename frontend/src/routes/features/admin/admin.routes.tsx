@@ -1,5 +1,6 @@
 import AdminLayout from '../../../layouts/AdminLayout';
 import AdminDashboard from '../../../pages/admin/AdminDashboard';
+import UserManagement from '../../../pages/admin/UserManagement';
 import { PATHS } from '../../../utils/path.utils';
 import { ROLE_NAMES } from '../../../utils/role.utils';
 import { type CustomRouteObject } from '../../types';
@@ -16,6 +17,10 @@ export const adminRoutes: CustomRouteObject[] = [
       {
         path: PATHS.ADMIN.DASHBOARD.replace(`${PATHS.ADMIN.ROOT}/`, ''),
         element: <AdminDashboard />
+      },
+      {
+        path: PATHS.ADMIN.USER_MANAGEMENT.replace(`${PATHS.ADMIN.ROOT}/`, ''),
+        element: <UserManagement />
       }
     ]
   }

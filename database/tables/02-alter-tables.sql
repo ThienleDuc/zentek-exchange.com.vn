@@ -4,6 +4,10 @@ GO
 
 -- NguoiDung
 ALTER TABLE NguoiDung ADD CONSTRAINT FK_NguoiDung_VaiTro FOREIGN KEY (VaiTroId) REFERENCES VaiTro(MaVaiTro);
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[NguoiDung]') AND name = 'DaXoa')
+BEGIN
+    ALTER TABLE NguoiDung ADD DaXoa BIT NOT NULL DEFAULT 0;
+END
 
 -- CuaHang
 ALTER TABLE CuaHang ADD CONSTRAINT FK_CuaHang_NguoiDung FOREIGN KEY (NguoiBanId) REFERENCES NguoiDung(MaNguoiDung);
