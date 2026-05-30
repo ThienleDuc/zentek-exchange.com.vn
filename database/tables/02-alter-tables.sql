@@ -22,6 +22,11 @@ ALTER TABLE SanPham ADD CONSTRAINT FK_SanPham_NguoiDung_Duyet FOREIGN KEY (Nguoi
 ALTER TABLE SanPham ADD CONSTRAINT CK_SanPham_TinhTrang CHECK (TinhTrang IN (N'Mới', N'Cũ'));
 ALTER TABLE SanPham ADD CONSTRAINT CK_SanPham_TrangThaiDuyet CHECK (TrangThaiDuyet IN (N'Chờ phê duyệt', N'Đã duyệt', N'Đã từ chối', N'Đã gỡ'));
 
+IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[dbo].[SanPham]') AND name = 'DiemDanhGia')
+BEGIN
+    ALTER TABLE SanPham ALTER COLUMN DiemDanhGia DECIMAL(2,1) NOT NULL;
+END
+
 -- AnhSanPham
 ALTER TABLE AnhSanPham ADD CONSTRAINT FK_AnhSanPham_SanPham FOREIGN KEY (SanPhamId) REFERENCES SanPham(MaSanPham);
 

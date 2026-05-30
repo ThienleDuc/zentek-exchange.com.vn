@@ -21,4 +21,8 @@ router.use('/users', userRoutes);
 // Đăng ký nhánh định tuyến /shops (Quản lý cửa hàng)
 router.use('/shops', shopRoutes);
 
+// Đăng ký nhánh định tuyến /admin/products (Quản lý sản phẩm cho Admin)
+const productAdminRoutes = require('./product/productAdmin.routes');
+router.use('/admin/products', productAdminRoutes);
+
 module.exports = router;

@@ -5,6 +5,8 @@
 /* -- IMPORT CÁC MODULE STYLES THEO PAGE -- */
 @import './pages/auth/login.css';
 @import './pages/auth/register.css';
+@import './pages/admin/ProductManagement.css';
+@import './pages/admin/ProductDetail.css';
 
 /* -- COMPONENTS -- */
 @import './components/searchable-dropdown.css';

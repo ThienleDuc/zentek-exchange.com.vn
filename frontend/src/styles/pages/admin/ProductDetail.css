@@ -1,0 +1,26 @@
+
+
+.product-detail-page .pd-action-button {
+  transition: all 0.2s ease;
+}
+
+.product-detail-page .pd-action-button:hover {
+  transform: translateY(-1px);
+}
+
+.product-detail-page .pd-stat-card {
+  transition: all 0.2s ease;
+}
+
+.product-detail-page .pd-stat-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.product-detail-page .pd-review-card {
+  transition: background-color 0.2s ease;
+}
+
+.product-detail-page .pd-review-card:hover {
+  background-color: var(--color-surface);
+}
