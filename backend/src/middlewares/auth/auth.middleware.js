@@ -51,7 +51,7 @@ const authorizeRoles = (...allowedRoles) => {
     }
 
     // 2. So sánh quyền của user hiện tại với danh sách quyền được yêu cầu
-    if (!hasAnyRole(req.user, allowedRoles)) {
+    if (!hasAnyRole(req.user, allowedRoles.flat())) {
       return res.status(403).json({
         success: false,
         message: 'Truy cập bị từ chối. Bạn không có quyền (Role) thực hiện hành động này.'

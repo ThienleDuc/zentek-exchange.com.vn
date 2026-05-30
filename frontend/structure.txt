@@ -1,0 +1,101 @@
+        return <div className="flex items-center gap-1 text-text-muted"><UserCircle size={14}/> Cá nhân</div>;
+        return <div className="flex items-center gap-1 text-text-muted"><Building2 size={14}/> Hộ kinh doanh</div>;
+        return <div className="flex items-center gap-1 text-text-muted"><Building2 size={14}/> Doanh nghiệp</div>;
+        return <div className="flex items-center gap-1 text-text-muted"><Store size={14}/> Khác</div>;
+    <div className="space-y-6">
+      <div className="bg-surface backdrop-blur-md border border-border-default rounded-xl p-6 shadow-2xl flex flex-col gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-surface-muted border border-border-default p-5 rounded-xl flex items-center justify-between shadow-sm">
+              <div>
+              </div>
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+              </div>
+            </div>
+            <div className="bg-surface-muted border border-border-default p-5 rounded-xl flex items-center justify-between shadow-sm">
+              <div>
+              </div>
+              <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center text-secondary">
+              </div>
+            </div>
+            <div className="bg-surface-muted border border-border-default p-5 rounded-xl flex items-center justify-between shadow-sm">
+              <div>
+              </div>
+              <div className="w-12 h-12 bg-warning/10 rounded-xl flex items-center justify-center text-warning">
+              </div>
+            </div>
+            <div className="bg-surface-muted border border-border-default p-5 rounded-xl flex items-center justify-between shadow-sm">
+              <div>
+              </div>
+              <div className="w-12 h-12 bg-danger/10 rounded-xl flex items-center justify-center text-danger">
+              </div>
+            </div>
+          </div>
+          <div className="bg-surface-muted rounded-lg p-4 border border-border-default flex flex-col">
+            <div className="h-[200px] w-full flex items-center justify-center">
+                <div className="w-full h-full flex items-center justify-center text-sm text-text-muted">
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="bg-surface backdrop-blur-md border border-border-default rounded-xl p-6 shadow-2xl flex flex-col gap-6 mt-2">
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+          <div className="flex flex-wrap gap-4 w-full xl:w-auto items-center">
+            <div className="relative w-full sm:w-56">
+            </div>
+            <div className="flex bg-surface-muted border border-border-default rounded-lg p-1">
+            </div>
+            <div className="w-44">
+            </div>
+            <div className="w-44">
+            </div>
+          </div>
+          </div>
+        </div>
+        <div className="bg-surface-muted rounded-lg overflow-hidden border border-border-default">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-text-main">
+              <thead className="bg-surface border-b border-border-default text-xs uppercase font-semibold text-text-muted">
+              <tr>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-default">
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted">Đang tải dữ liệu...</td>
+                </tr>
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-text-muted">Không tìm thấy cửa hàng nào</td>
+                </tr>
+                  <tr key={shop.MaCuaHang} className="hover:bg-surface/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg">
+                          </div>
+                        <div>
+                          <div className="font-semibold text-text-main">{shop.TenCuaHang}</div>
+                          <div className="text-xs text-text-muted">{shop.SoDienThoai}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-medium">{shop.TenNguoiBan}</div>
+                      <div className="text-xs text-text-muted">{shop.TenDangNhap}</div>
+                    </td>
+                    <td className="px-6 py-4 font-mono text-sm">{shop.MaSoThue}</td>
+                    <td className="px-6 py-4">{getTypeBadge(shop.LoaiHinhCuaHang)}</td>
+                    <td className="px-6 py-4 text-center">
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                      </div>
+                    </td>
+                  </tr>
+            </tbody>
+          </table>
+          </div>
+        </div>
+          <div className="pt-4 flex justify-end">
+          </div>
+      </div>
+    </div>

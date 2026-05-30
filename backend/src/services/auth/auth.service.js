@@ -81,7 +81,7 @@ class AuthService {
     }
   }
 
-  async registerSeller({ username, password, email, fullName, otp, shopName, province, district, ward, address, shopPhone, shopType, taxCode, logo, description, licensePdf }) {
+  async registerSeller({ username, password, email, fullName, otp, shopName, province, district, ward, address, shopPhone, shopType, taxCode, logo, description, licensePdf, bypassOtp }) {
     try {
       const existingUserByUsername = await userRepository.getUserByUsername(username);
       if (existingUserByUsername) throw new Error('Tên đăng nhập đã tồn tại trên hệ thống.');
@@ -93,7 +93,9 @@ class AuthService {
       const existingShop = await shopRepository.getShopByName(shopName);
       if (existingShop) throw new Error('Tên cửa hàng đã tồn tại trên hệ thống.');
 
-      otpService.verifyOTP(email, otp);
+      if (!bypassOtp) {
+        otpService.verifyOTP(email, otp);
+      }
 
       const roleId = await roleService.getRoleIdByName('Seller');
       if (!roleId) throw new Error(`Vai trò 'Seller' không tồn tại.`);

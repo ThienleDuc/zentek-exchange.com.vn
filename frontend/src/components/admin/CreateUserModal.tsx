@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, Info, Eye, EyeOff } from 'lucide-react';
+import { X, Loader2, Info, Eye, EyeOff, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 
@@ -138,7 +138,8 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-surface border border-border-default rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="flex justify-between items-center p-5 border-b border-border-default">
-          <h3 className="text-xl font-semibold text-text-main">
+          <h3 className="text-xl font-semibold text-text-main flex items-center gap-2">
+            <User className="w-5 h-5 text-primary" />
             {isEditMode ? 'Chỉnh sửa người dùng' : 'Thêm mới người dùng (Người mua)'}
           </h3>
           <button onClick={onClose} className="text-text-muted hover:text-text-main transition-colors">

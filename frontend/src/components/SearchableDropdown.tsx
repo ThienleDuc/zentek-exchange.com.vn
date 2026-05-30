@@ -13,6 +13,7 @@ interface SearchableDropdownProps {
   placeholder?: string;
   disabled?: boolean;
   error?: boolean;
+  theme?: 'default' | 'admin';
 }
 
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
@@ -22,6 +23,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   placeholder = 'Chọn một mục...',
   disabled = false,
   error = false,
+  theme = 'default',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,24 +64,65 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     setIsOpen(false);
   };
 
+  const getHeaderClasses = () => {
+    if (theme === 'admin') {
+      return `relative flex items-center justify-between w-full px-3 py-2 bg-surface-muted border rounded-lg text-text-main transition-all cursor-pointer ${
+        error ? 'border-danger' : 'border-border-default hover:border-primary/50'
+      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${isOpen ? 'ring-2 ring-primary border-transparent' : ''}`;
+    }
+    return `searchable-dropdown-header ${isOpen ? 'open' : ''} ${disabled ? 'disabled' : ''} ${error ? 'error' : ''}`;
+  };
+
+  const getMenuClasses = () => {
+    if (theme === 'admin') {
+      return `absolute z-50 w-full mt-1 bg-surface border border-border-default rounded-lg shadow-xl overflow-hidden max-h-60 flex flex-col`;
+    }
+    return `searchable-dropdown-menu`;
+  };
+
+  const getSearchClasses = () => {
+    if (theme === 'admin') {
+      return `w-full px-3 py-2 bg-surface-muted border-b border-border-default text-text-main outline-none text-sm placeholder:text-text-muted sticky top-0`;
+    }
+    return `searchable-dropdown-search`;
+  };
+
+  const getItemClasses = (isActive: boolean) => {
+    if (theme === 'admin') {
+      return `px-3 py-2 text-sm cursor-pointer transition-colors ${
+        isActive ? 'bg-primary/20 text-primary font-medium' : 'text-text-main hover:bg-surface-muted'
+      }`;
+    }
+    return `searchable-dropdown-item ${isActive ? 'active' : ''}`;
+  };
+
+  const getEmptyClasses = () => {
+    if (theme === 'admin') {
+      return `px-3 py-3 text-sm text-center text-text-muted`;
+    }
+    return `searchable-dropdown-empty`;
+  };
+
+  const containerClasses = theme === 'admin' ? "relative w-full" : "searchable-dropdown-container";
+
   return (
-    <div className="searchable-dropdown-container" ref={containerRef}>
+    <div className={containerClasses} ref={containerRef}>
       <div 
-        className={`searchable-dropdown-header ${isOpen ? 'open' : ''} ${disabled ? 'disabled' : ''} ${error ? 'error' : ''}`}
+        className={getHeaderClasses()}
         onClick={toggleDropdown}
       >
-        <span style={{ color: selectedOption ? '#ffffff' : 'rgba(255, 255, 255, 0.4)' }}>
+        <span style={theme === 'default' ? { color: selectedOption ? '#ffffff' : 'rgba(255, 255, 255, 0.4)' } : { color: selectedOption ? 'inherit' : 'var(--text-muted)' }} className={theme === 'admin' && !selectedOption ? "text-text-muted" : "truncate"}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDown size={16} className="searchable-dropdown-icon" />
+        <ChevronDown size={16} className={theme === 'default' ? "searchable-dropdown-icon" : `text-text-muted transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </div>
 
       {isOpen && !disabled && (
-        <div className="searchable-dropdown-menu">
-          <div className="searchable-dropdown-search-wrapper relative">
+        <div className={getMenuClasses()}>
+          <div className="relative">
             <input 
               type="text" 
-              className="searchable-dropdown-search" 
+              className={getSearchClasses()} 
               placeholder="Tìm kiếm..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -88,19 +131,19 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
             />
           </div>
           
-          <div className="searchable-dropdown-list">
+          <div className={theme === 'admin' ? "overflow-y-auto custom-scrollbar" : "searchable-dropdown-list"}>
             {filteredOptions.length > 0 ? (
               filteredOptions.map((option) => (
                 <div 
                   key={option.value}
-                  className={`searchable-dropdown-item ${value === option.value ? 'active' : ''}`}
+                  className={getItemClasses(value === option.value)}
                   onClick={() => handleSelect(option.value)}
                 >
                   {option.label}
                 </div>
               ))
             ) : (
-              <div className="searchable-dropdown-empty">
+              <div className={getEmptyClasses()}>
                 Không tìm thấy kết quả
               </div>
             )}

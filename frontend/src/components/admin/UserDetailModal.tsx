@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, KeyRound, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, KeyRound, Loader2, CheckCircle2, User } from 'lucide-react';
 import api from '../../services/api';
 
 // Extract API base URL to construct image paths
@@ -64,7 +64,10 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-surface border border-border-default rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="flex justify-between items-center p-5 border-b border-border-default">
-          <h3 className="text-xl font-semibold text-text-main">Chi tiết người dùng</h3>
+          <h3 className="text-xl font-semibold text-text-main flex items-center gap-2">
+            <User className="w-5 h-5 text-primary" />
+            Chi tiết người dùng
+          </h3>
           <button onClick={onClose} className="text-text-muted hover:text-text-main transition-colors">
             <X className="w-5 h-5" />
           </button>
