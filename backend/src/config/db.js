@@ -9,7 +9,8 @@ const config = {
   port: parseInt(process.env.DB_PORT || '1433'),
   options: {
     encrypt: false, // Set to true if you're on Azure
-    trustServerCertificate: true // Important for local development
+    trustServerCertificate: true, // Important for local development
+    useUTC: false // Đảm bảo SQL Server trả về đúng local time thay vì hiểu lầm là UTC
   }
 };
 

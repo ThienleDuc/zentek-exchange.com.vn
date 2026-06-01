@@ -4,6 +4,7 @@ import UserManagement from '../../../pages/admin/UserManagement';
 import ShopManagement from '../../../pages/admin/ShopManagement';
 import ProductManagement from '../../../pages/admin/ProductManagement';
 import ProductDetail from '../../../pages/admin/ProductDetail';
+import MessageManagement from '../../../pages/admin/MessageManagement';
 import { PATHS } from '../../../utils/path.utils';
 import { ROLE_NAMES } from '../../../utils/role.utils';
 import { type CustomRouteObject } from '../../types';
@@ -36,6 +37,10 @@ export const adminRoutes: CustomRouteObject[] = [
       {
         path: `${PATHS.ADMIN.PRODUCT_MANAGEMENT.replace(`${PATHS.ADMIN.ROOT}/`, '')}/:id`,
         element: <ProductDetail />
+      },
+      {
+        path: PATHS.ADMIN.MESSAGE_MANAGEMENT.replace(`${PATHS.ADMIN.ROOT}/`, ''),
+        element: <MessageManagement />
       }
     ]
   }

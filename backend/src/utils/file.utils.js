@@ -14,6 +14,16 @@ if (!fs.existsSync(imageUploadDir)) {
   fs.mkdirSync(imageUploadDir, { recursive: true });
 }
 
+const mediaUploadDir = path.join(__dirname, '../../public/uploads/media');
+if (!fs.existsSync(mediaUploadDir)) {
+  fs.mkdirSync(mediaUploadDir, { recursive: true });
+}
+
+const hiddenMediaUploadDir = path.join(__dirname, '../../public/uploads/hidden_media');
+if (!fs.existsSync(hiddenMediaUploadDir)) {
+  fs.mkdirSync(hiddenMediaUploadDir, { recursive: true });
+}
+
 // Cấu hình lưu trữ
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -88,6 +98,38 @@ const uploadImageMiddleware = multer({
   }
 });
 
+// Cấu hình lưu trữ cho Media (Hình ảnh, Video)
+const mediaStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, mediaUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uuid = crypto.randomUUID();
+    const base64urlName = Buffer.from(uuid).toString('base64url');
+    cb(null, `${base64urlName}${ext}`);
+  }
+});
+
+// Bộ lọc định dạng file Media
+const mediaFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'];
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Chỉ chấp nhận file hình ảnh hoặc video!'), false);
+  }
+};
+
+// Cấu hình Multer cho Media
+const uploadMediaMiddleware = multer({
+  storage: mediaStorage,
+  fileFilter: mediaFileFilter,
+  limits: {
+    fileSize: 100 * 1024 * 1024 // Giới hạn 100MB cho video (khoảng 1 phút video 720p 60fps)
+  }
+});
+
 /**
  * Hàm xóa file vật lý
  * @param {string} fileUrl - Đường dẫn file (vd: /uploads/files/xxx.pdf)
@@ -104,6 +146,10 @@ const deleteFile = (fileUrl) => {
     // Kiểm tra url xem thuộc thư mục nào
     if (fileUrl.includes('/uploads/images/')) {
       absolutePath = path.join(imageUploadDir, fileName);
+    } else if (fileUrl.includes('/uploads/media/')) {
+      absolutePath = path.join(mediaUploadDir, fileName);
+    } else if (fileUrl.includes('/uploads/hidden_media/')) {
+      absolutePath = path.join(hiddenMediaUploadDir, fileName);
     } else {
       absolutePath = path.join(uploadDir, fileName);
     }
@@ -117,8 +163,43 @@ const deleteFile = (fileUrl) => {
   }
 };
 
+/**
+ * Hàm ẩn file vật lý (move sang thư mục hidden_media)
+ * @param {string} fileUrl - Đường dẫn file cũ (vd: /uploads/media/xxx.mp4)
+ * @returns {string|null} - Đường dẫn mới của file hoặc null nếu lỗi
+ */
+const hideFile = (fileUrl) => {
+  if (!fileUrl) return null;
+  
+  try {
+    const fileName = path.basename(fileUrl);
+    let oldAbsolutePath = '';
+    
+    if (fileUrl.includes('/uploads/media/')) {
+      oldAbsolutePath = path.join(mediaUploadDir, fileName);
+    } else {
+      // Chỉ hỗ trợ ẩn file từ thư mục media
+      return null;
+    }
+    
+    const newAbsolutePath = path.join(hiddenMediaUploadDir, fileName);
+    
+    if (fs.existsSync(oldAbsolutePath)) {
+      fs.renameSync(oldAbsolutePath, newAbsolutePath);
+      console.log(`👁️ Đã ẩn file: ${fileName}`);
+      return `/uploads/hidden_media/${fileName}`;
+    }
+    return null;
+  } catch (error) {
+    console.error(`❌ Lỗi khi ẩn file ${fileUrl}:`, error.message);
+    return null;
+  }
+};
+
 module.exports = {
   uploadDocumentMiddleware,
   uploadImageMiddleware,
-  deleteFile
+  uploadMediaMiddleware,
+  deleteFile,
+  hideFile
 };

@@ -32,6 +32,7 @@ export const PATHS = {
     USER_MANAGEMENT: '/admin/users',
     SHOP_MANAGEMENT: '/admin/shops',
     PRODUCT_MANAGEMENT: '/admin/products',
+    MESSAGE_MANAGEMENT: '/admin/messages',
   }
 } as const;
 
@@ -44,6 +45,7 @@ export const ROLE_ALLOWED_PATHS: Record<RoleNames, string[]> = {
     PATHS.ADMIN.USER_MANAGEMENT,
     PATHS.ADMIN.SHOP_MANAGEMENT,
     PATHS.ADMIN.PRODUCT_MANAGEMENT,
+    PATHS.ADMIN.MESSAGE_MANAGEMENT,
   ],
   [ROLE_NAMES.SELLER]: [
     PATHS.Seller.DASHBOARD,

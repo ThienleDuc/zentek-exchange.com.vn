@@ -136,8 +136,8 @@ class UserRepository {
       `;
 
       if (search) {
-        query += ` AND (nd.HoTen LIKE @Search OR nd.Email LIKE @Search OR nd.TenDangNhap LIKE @Search)`;
-        countQuery += ` AND (nd.HoTen LIKE @Search OR nd.Email LIKE @Search OR nd.TenDangNhap LIKE @Search)`;
+        query += ` AND (nd.HoTen LIKE @Search OR nd.Email LIKE @Search OR nd.TenDangNhap LIKE @Search OR nd.SoDienThoai LIKE @Search)`;
+        countQuery += ` AND (nd.HoTen LIKE @Search OR nd.Email LIKE @Search OR nd.TenDangNhap LIKE @Search OR nd.SoDienThoai LIKE @Search)`;
         request.input('Search', sql.NVarChar(100), `%${search}%`);
       }
 

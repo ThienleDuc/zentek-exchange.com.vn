@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { PATHS } from '../../utils/path.utils';
-import { LayoutDashboard, Users, Store, Package, LogOut, ChevronDown, User as UserIcon } from 'lucide-react';
+import { LayoutDashboard, Users, Store, Package, LogOut, ChevronDown, User as UserIcon, MessageSquare } from 'lucide-react';
 import { storage } from '../../utils/storage.utils';
 import { type User } from '../../utils/role.utils';
 
@@ -47,6 +47,11 @@ const AdminSidebar = () => {
       title: 'Quản lý sản phẩm',
       path: PATHS.ADMIN.PRODUCT_MANAGEMENT,
       icon: <Package size={20} />,
+    },
+    {
+      title: 'Quản lý tin nhắn',
+      path: PATHS.ADMIN.MESSAGE_MANAGEMENT,
+      icon: <MessageSquare size={20} />,
     },
   ];
 

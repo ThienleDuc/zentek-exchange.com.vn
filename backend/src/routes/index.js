@@ -25,4 +25,12 @@ router.use('/shops', shopRoutes);
 const productAdminRoutes = require('./product/productAdmin.routes');
 router.use('/admin/products', productAdminRoutes);
 
+// Đăng ký nhánh định tuyến /admin/chats (Quản lý tin nhắn cho Admin)
+const chatAdminRoutes = require('./admin/chatAdmin.routes');
+router.use('/admin/chats', chatAdminRoutes);
+
+// Đăng ký nhánh định tuyến /chats (Quản lý tin nhắn cho User)
+const chatRoutes = require('./chat/chat.routes');
+router.use('/chats', chatRoutes);
+
 module.exports = router;
