@@ -20,6 +20,10 @@ export interface Ward {
   division_type: string;
 }
 
+export interface ProvinceTree extends Province {
+  districts: (District & { wards: Ward[] })[];
+}
+
 export const getProvinces = async (): Promise<Province[]> => {
   try {
     const response = await axios.get(`${BASE_URL}/p/`);
@@ -49,5 +53,16 @@ export const getWards = async (districtCode: number): Promise<Ward[]> => {
   } catch (error) {
     console.error('Error fetching wards:', error);
     return [];
+  }
+};
+
+export const getProvinceTree = async (provinceCode: number): Promise<ProvinceTree | null> => {
+  try {
+    if (!provinceCode) return null;
+    const response = await axios.get(`${BASE_URL}/p/${provinceCode}?depth=3`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching province tree:', error);
+    return null;
   }
 };

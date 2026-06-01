@@ -163,3 +163,160 @@ Tất cả dữ liệu chỉ tính trên các đơn hàng **đã hoàn thành** 
 ---
 
 Kế hoạch này cung cấp đầy đủ mô tả để thiết kế trang dashboard cho người bán, với các biểu đồ thống kê, chỉ số tăng trưởng và bảng sản phẩm bán chạy, bám sát database ZenTekExchange và có responsive.
+
+```markdown
+# Kế hoạch thiết kế trang Dashboard (Admin) – ZenTekExchange
+
+> **Phạm vi:** Chỉ phần thân trang dashboard (main content), không bao gồm header, footer, menu sidebar (đã có component layout riêng).  
+> **Vai trò:** Quản trị viên (Admin).  
+> **Kỹ thuật:** ReactJS, TailwindCSS, thư viện biểu đồ (Recharts / Chart.js).  
+> **Dữ liệu:** Bám sát database `ZenTekExchange` – các bảng `NguoiDung`, `CuaHang`, `SanPham`, `DonHang`, `ChiTietDonHang`, `DanhGiaSanPham`, `VaiTro`.
+
+> **Yêu cầu đặc biệt:** Trang chỉ hiển thị các biểu đồ tổng quát và chỉ số KPI. **Không có bảng danh sách chi tiết** (sản phẩm chờ duyệt, cửa hàng chờ xác thực, top cửa hàng, hoạt động gần đây). Có bộ lọc **khoảng thời gian (ngày/tháng)** áp dụng cho các biểu đồ và chỉ số tăng trưởng.
+
+---
+
+## 1. Mục đích và bố cục tổng thể
+
+**Mục đích:** Cung cấp cho admin cái nhìn tổng quan toàn hệ thống thông qua các chỉ số chính và biểu đồ theo thời gian, có thể lọc dữ liệu theo khoảng ngày tháng tùy chọn.
+
+**Bố cục:** Trang được chia thành các khối sắp xếp theo chiều dọc, sử dụng grid linh hoạt.
+
+| Hàng       | Nội dung                                                                                                                                                               |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Hàng 1** | **Bộ lọc thời gian** (Dropdown hoặc Date Range Picker) – đặt ở đầu trang, căn phải hoặc giữa.                                                                          |
+| **Hàng 2** | **Các thẻ KPI chính** (6–8 thẻ): Tổng người dùng, tổng cửa hàng, tổng sản phẩm, tổng đơn hàng, tổng doanh thu, đánh giá trung bình, tỷ lệ hủy đơn, sản phẩm chờ duyệt. |
+| **Hàng 3** | **Biểu đồ doanh thu & số đơn hàng** (kết hợp 2 đường trên cùng biểu đồ).                                                                                               |
+| **Hàng 4** | **Biểu đồ tăng trưởng** (các chỉ số so sánh với kỳ trước) – có thể hiển thị dạng thẻ hoặc thanh tiến trình.                                                            |
+| **Hàng 5** | **Biểu đồ phân bố đánh giá sao** (1–5 sao) – dạng thanh ngang hoặc tròn.                                                                                               |
+| **Hàng 6** | **Biểu đồ top danh mục bán chạy** (doanh thu theo danh mục) – dạng cột hoặc tròn.                                                                                      |
+
+Tất cả các biểu đồ (trừ thẻ KPI) đều phản ánh dữ liệu trong **khoảng thời gian được chọn** ở bộ lọc. Các thẻ KPI có thể hiển thị giá trị tại thời điểm hiện tại (không lọc) hoặc cũng lọc theo thời gian – nên lọc theo thời gian để đồng bộ.
+
+---
+
+## 2. Bộ lọc thời gian
+
+- **Vị trí:** Đầu trang, phía trên các thẻ KPI, căn bên phải hoặc ở giữa.
+- **Loại bộ lọc:** Date Range Picker (chọn khoảng ngày) hoặc Dropdown các mốc có sẵn: Hôm nay, 7 ngày qua, 30 ngày qua, Tháng này, Tháng trước, Quý này, Năm nay, Tùy chỉnh.
+- **Tác động:** Khi thay đổi khoảng thời gian, tất cả biểu đồ và các chỉ số KPI (nếu có thể tính theo khoảng) sẽ được cập nhật lại.
+- **Trạng thái mặc định:** 30 ngày qua.
+
+---
+
+## 3. Dữ liệu thống kê và biểu đồ
+
+### 3.1. Các thẻ KPI (chỉ số chính)
+
+Mỗi thẻ hiển thị một chỉ số tổng quan **trong khoảng thời gian đã chọn** (hoặc tổng toàn bộ nếu không áp dụng được). Đề xuất tính các chỉ số sau:
+
+| Chỉ số                  | Cách tính (trong khoảng thời gian)                                                                                                   | Ghi chú                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| **Tổng người dùng mới** | `COUNT(NguoiDung.MaNguoiDung)` với `NgayTao` trong khoảng                                                                            | Số người đăng ký mới                    |
+| **Tổng cửa hàng mới**   | `COUNT(CuaHang.MaCuaHang)` với `NgayTao` trong khoảng                                                                                | Số shop mới mở                          |
+| **Tổng sản phẩm mới**   | `COUNT(SanPham.MaSanPham)` với `NgayDang` trong khoảng                                                                               | Số sản phẩm được đăng mới               |
+| **Tổng đơn hàng**       | `COUNT(DonHang.MaDonHang)` với `NgayTao` trong khoảng                                                                                | Tất cả đơn (không phân biệt trạng thái) |
+| **Tổng doanh thu**      | `SUM(SoLuong * DonGia)` từ `ChiTietDonHang` JOIN `DonHang` với `DonHang.TrangThaiDon = N'Đã nhận'` và `DonHang.NgayTao` trong khoảng | Doanh thu thực tế                       |
+| **Đánh giá trung bình** | `AVG(DanhGiaSanPham.SoSao)` với `NgayTao` trong khoảng                                                                               | Đánh giá mới trong kỳ                   |
+| **Tỷ lệ hủy đơn**       | `(Số đơn Đã hủy trong kỳ) / (Tổng số đơn trong kỳ) * 100%`                                                                           | Tính theo phần trăm                     |
+| **Sản phẩm chờ duyệt**  | `COUNT(SanPham.MaSanPham)` với `TrangThaiDuyet = N'Chờ phê duyệt'` (không lọc thời gian hoặc lọc theo `NgayDang`)                    | Cần admin chú ý                         |
+
+> **Lưu ý:** Có thể thay thế “tổng mới” bằng “tổng lũy kế đến hiện tại” nếu muốn. Nhưng để phản ánh đúng khoảng thời gian, nên dùng “mới trong kỳ”. Riêng “sản phẩm chờ duyệt” nên là tồn kho hiện tại, không lọc thời gian.
+
+### 3.2. Biểu đồ doanh thu & số đơn hàng
+
+- **Loại biểu đồ:** Line chart (đường) với hai trục y: trục trái cho doanh thu (đơn vị VND), trục phải cho số đơn hàng.
+- **Dữ liệu:** Nhóm theo ngày (hoặc tháng) trong khoảng thời gian đã chọn. Mỗi điểm: ngày, tổng doanh thu, tổng số đơn (của các đơn `Đã nhận`).
+- **Tương tác:** Hover hiển thị tooltip chi tiết. Có thể chọn hiển thị dạng cột hoặc đường.
+
+### 3.3. Biểu đồ tăng trưởng (so sánh với kỳ trước)
+
+Thay vì bảng, hiển thị dưới dạng **3–4 thẻ nhỏ** hoặc **thanh ngang** so sánh phần trăm tăng trưởng của các chỉ số chính:
+
+- % tăng trưởng doanh thu
+- % tăng trưởng số đơn hàng
+- % tăng trưởng người dùng mới
+- % tăng trưởng cửa hàng mới
+
+Cách tính: So sánh khoảng thời gian đã chọn với khoảng thời gian tương ứng liền trước (cùng độ dài). Hiển thị mũi tên lên/xanh (tăng), xuống/đỏ (giảm), kèm phần trăm.
+
+### 3.4. Biểu đồ phân bố đánh giá sao
+
+- **Loại biểu đồ:** Bar chart (thanh ngang) hoặc Pie chart (tròn).
+- **Dữ liệu:** Đếm số lượng đánh giá cho mỗi mức sao (1–5) trong khoảng thời gian đã chọn (dựa trên `NgayTao` của `DanhGiaSanPham`).
+- **Hiển thị:** Mỗi sao một thanh, độ dài tỷ lệ với số lượng. Có thể hiển thị phần trăm.
+
+### 3.5. Biểu đồ top danh mục bán chạy
+
+- **Loại biểu đồ:** Bar chart (dọc) hoặc Pie chart.
+- **Dữ liệu:** Tính tổng doanh thu theo `DanhMuc` (JOIN `SanPham` – `DanhMuc` – `ChiTietDonHang` – `DonHang` với `TrangThaiDon = N'Đã nhận'` trong khoảng thời gian). Lấy top 5–10 danh mục có doanh thu cao nhất.
+- **Hiển thị:** Tên danh mục, doanh thu (hoặc % đóng góp).
+
+---
+
+## 4. Luồng dữ liệu và API
+
+### 4.1. Các endpoint cần có
+
+- `GET /api/admin/dashboard/overview?from=...&to=...` – trả về các chỉ số KPI (tổng số mới trong kỳ, tổng doanh thu, tỷ lệ hủy, sản phẩm chờ duyệt – riêng cái này không cần lọc thời gian).
+- `GET /api/admin/dashboard/revenue-orders?from=...&to=...&groupBy=day` – trả về mảng {date, revenue, orderCount} cho biểu đồ.
+- `GET /api/admin/dashboard/growth?from=...&to=...` – trả về % tăng trưởng của doanh thu, đơn hàng, người dùng, cửa hàng.
+- `GET /api/admin/dashboard/rating-distribution?from=...&to=...` – trả về số lượng đánh giá theo từng sao.
+- `GET /api/admin/dashboard/top-categories?from=...&to=...&limit=10` – trả về top danh mục theo doanh thu.
+
+### 4.2. Khi thay đổi bộ lọc
+
+- Client gửi request mới với `from` và `to` (định dạng YYYY-MM-DD hoặc datetime).
+- Tất cả các API đều được gọi lại (có thể gọi song song).
+- Hiển thị skeleton loading cho các biểu đồ và thẻ KPI (trừ các thẻ có thể cache).
+
+### 4.3. Xử lý lỗi và loading
+
+- Skeleton: hiển thị các khối mờ nhấp nháy thay cho biểu đồ và thẻ.
+- Nếu lỗi API, hiển thị thông báo lỗi nhỏ trên từng khối, có nút thử lại.
+
+---
+
+## 5. Tương tác và trạng thái
+
+- **Khởi tạo:** Chọn khoảng thời gian mặc định (30 ngày qua), gọi toàn bộ API, hiển thị dữ liệu.
+- **Thay đổi bộ lọc:** Cập nhật state `fromDate`, `toDate`, gọi lại API, reset loading.
+- **Hover biểu đồ:** Hiển thị tooltip với giá trị chi tiết (ngày, doanh thu, số đơn…).
+- **Responsive:** Trên mobile, các biểu đồ chuyển sang dạng cuộn ngang hoặc thu nhỏ, các thẻ KPI xếp dọc.
+
+---
+
+## 6. Responsive với TailwindCSS
+
+- **Desktop (≥1024px):** Các thẻ KPI nằm trên grid 4 cột (mỗi thẻ chiếm 1/4). Biểu đồ kép chiếm full width, biểu đồ tăng trưởng có thể 4 thẻ ngang, biểu đồ đánh giá và top danh mục có thể đặt cạnh nhau (2 cột).
+- **Tablet (768px–1024px):** Thẻ KPI 2–3 cột. Biểu đồ đánh giá và top danh mục xếp dọc.
+- **Mobile (<768px):** Thẻ KPI 1 cột. Biểu đồ cuộn ngang hoặc hiển thị đơn giản hơn.
+
+---
+
+## 7. Tóm tắt các thành phần chính
+
+- [x] **Bộ lọc thời gian** (Date Range Picker hoặc dropdown các mốc)
+- [x] **Các thẻ KPI** (8 thẻ): người dùng mới, cửa hàng mới, sản phẩm mới, tổng đơn hàng, tổng doanh thu, đánh giá trung bình, tỷ lệ hủy, sản phẩm chờ duyệt.
+- [x] **Biểu đồ doanh thu & số đơn hàng** (line chart kép, theo ngày/tháng)
+- [x] **Biểu đồ tăng trưởng** (thẻ % so sánh với kỳ trước)
+- [x] **Biểu đồ phân bố đánh giá sao** (bar hoặc pie)
+- [x] **Biểu đồ top danh mục bán chạy** (bar dọc, doanh thu)
+- [x] **Loading skeleton** cho từng khối
+- [x] **Xử lý lỗi** và thử lại
+- [x] **Responsive** trên mọi thiết bị
+
+---
+
+## 8. Lưu ý đặc biệt từ database
+
+- Đối với các chỉ số “mới trong kỳ”, cột thời gian sử dụng: `NguoiDung.NgayTao`, `CuaHang.NgayTao`, `SanPham.NgayDang`, `DonHang.NgayTao`, `DanhGiaSanPham.NgayTao`.
+- Doanh thu chỉ tính trên đơn hàng có `TrangThaiDon = N'Đã nhận'` để phản ánh thực tế.
+- Tỷ lệ hủy đơn: đơn hủy có `TrangThaiDon = N'Đã hủy'`. Tổng số đơn trong kỳ bao gồm tất cả trạng thái.
+- Sản phẩm chờ duyệt: không lọc thời gian, là số lượng hiện tại (`TrangThaiDuyet = N'Chờ phê duyệt'`).
+- Biểu đồ top danh mục: có thể dùng `DanhMuc` cấp 1 để tổng hợp, nếu muốn chi tiết hơn thì lấy theo `DanhMucId` của sản phẩm.
+
+---
+
+Kế hoạch này cung cấp đầy đủ mô tả để thiết kế trang dashboard cho admin, chỉ gồm các biểu đồ tổng quát và chỉ số, có bộ lọc theo khoảng thời gian, không có bảng danh sách, bám sát database ZenTekExchange.
+```

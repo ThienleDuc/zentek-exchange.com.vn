@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { productAdminService } from '../../services/productAdmin.service';
+import { productService } from '../../services/product.service';
+import { storage } from '../../utils/storage.utils';
+import { isAdmin, isSeller, isBuyer } from '../../utils/role.utils';
 import Alert, { type AlertType } from '../../components/common/Alert';
 import ProductImageGallery from '../../components/admin/ProductImageGallery';
 import ProductInfo from '../../components/admin/product-detail/ProductInfo';
@@ -38,11 +41,21 @@ export interface ProductDetailType {
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [product, setProduct] = useState<ProductDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const leftColRef = useRef<HTMLDivElement>(null);
   const [leftHeight, setLeftHeight] = useState<number | 'auto'>('auto');
   const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
+
+  const isAdminView = location.pathname.startsWith('/admin');
+  const currentUser = storage.getUser();
+
+  let role: 'admin' | 'seller' | 'buyer' = 'buyer';
+  if (isAdminView && currentUser) {
+    if (isAdmin(currentUser)) role = 'admin';
+    else if (isSeller(currentUser)) role = 'seller';
+  }
 
   useEffect(() => {
     if (!leftColRef.current) return;
@@ -74,6 +87,7 @@ const ProductDetail = () => {
       window.removeEventListener('resize', handleResize);
     };
   }, [product, loading]);
+
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
       // Chỉ áp dụng trên màn hình lớn
@@ -119,7 +133,9 @@ const ProductDetail = () => {
   const fetchDetail = async () => {
     try {
       setLoading(true);
-      const data = await productAdminService.getProductDetail(id as string);
+      const data = isAdminView 
+        ? await productAdminService.getProductDetail(id as string)
+        : await productService.getProductDetail(id as string);
       if (data.success) {
         setProduct(data.data);
         if (data.data.images?.length > 0) {
@@ -135,7 +151,7 @@ const ProductDetail = () => {
 
   useEffect(() => {
     if (id) fetchDetail();
-  }, [id]);
+  }, [id, isAdminView]);
 
   const handleAction = async (actionStatus: string, confirmMessage: string) => {
     setAlertConfig({
@@ -157,14 +173,138 @@ const ProductDetail = () => {
     });
   };
 
+  const handleAddToCart = () => {
+    if (!currentUser) {
+      setAlertConfig({
+        isOpen: true,
+        type: 'confirm',
+        title: 'Yêu cầu đăng nhập',
+        message: 'Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng. Đi đến trang đăng nhập?',
+        onConfirm: () => {
+          navigate('/dang-nhap', { state: { from: location } });
+        }
+      });
+      return;
+    }
+    
+    if (!product) return;
+
+    // Thêm sản phẩm vào localStorage cart_items
+    const stored = localStorage.getItem('cart_items');
+    let cartList = stored ? JSON.parse(stored) : [];
+    
+    const existingIndex = cartList.findIndex((item: any) => item.sanPhamId === product.MaSanPham);
+    
+    if (existingIndex > -1) {
+      cartList[existingIndex].soLuong += 1;
+    } else {
+      cartList.push({
+        maChiTietGioHang: `ct_${Date.now()}`,
+        sanPhamId: product.MaSanPham,
+        tenSanPham: product.TieuDe,
+        anh: product.images?.[0]?.DuongDanAnh || '/default-product.png',
+        phanLoai: product.variations?.[0]?.TenPhanLoai || undefined,
+        tenCuaHang: product.TenCuaHang || 'Cửa hàng',
+        donGia: product.Gia,
+        soLuong: 1,
+        tonKho: product.SoLuong,
+        daHetHang: product.SoLuong <= 0
+      });
+    }
+    
+    localStorage.setItem('cart_items', JSON.stringify(cartList));
+    
+    setAlertConfig({
+      isOpen: true,
+      type: 'success',
+      title: 'Thành công',
+      message: 'Đã thêm sản phẩm vào giỏ hàng'
+    });
+  };
+
+  const handleBuyNow = () => {
+    if (!currentUser) {
+      setAlertConfig({
+        isOpen: true,
+        type: 'confirm',
+        title: 'Yêu cầu đăng nhập',
+        message: 'Bạn cần đăng nhập để mua hàng. Đi đến trang đăng nhập?',
+        onConfirm: () => {
+          navigate('/dang-nhap', { state: { from: location } });
+        }
+      });
+      return;
+    }
+    
+    if (!product) return;
+
+    const stored = localStorage.getItem('cart_items');
+    let cartList = stored ? JSON.parse(stored) : [];
+    
+    const existingIndex = cartList.findIndex((item: any) => item.sanPhamId === product.MaSanPham);
+    
+    if (existingIndex > -1) {
+      cartList[existingIndex].soLuong += 1;
+    } else {
+      cartList.push({
+        maChiTietGioHang: `ct_${Date.now()}`,
+        sanPhamId: product.MaSanPham,
+        tenSanPham: product.TieuDe,
+        anh: product.images?.[0]?.DuongDanAnh || '/default-product.png',
+        phanLoai: product.variations?.[0]?.TenPhanLoai || undefined,
+        tenCuaHang: product.TenCuaHang || 'Cửa hàng',
+        donGia: product.Gia,
+        soLuong: 1,
+        tonKho: product.SoLuong,
+        daHetHang: product.SoLuong <= 0
+      });
+      localStorage.setItem('cart_items', JSON.stringify(cartList));
+    }
+    
+    navigate('/buyer/gio-hang');
+  };
+
+  const handleContactSeller = () => {
+    if (!currentUser) {
+      setAlertConfig({
+        isOpen: true,
+        type: 'confirm',
+        title: 'Yêu cầu đăng nhập',
+        message: 'Bạn cần đăng nhập để liên hệ với người bán. Đi đến trang đăng nhập?',
+        onConfirm: () => {
+          navigate('/dang-nhap', { state: { from: location } });
+        }
+      });
+      return;
+    }
+
+    if (!product) return;
+
+    if (isBuyer(currentUser)) {
+      navigate(`/buyer/tin-nhan?store=${encodeURIComponent(product.TenCuaHang)}`);
+    } else if (isSeller(currentUser)) {
+      navigate(`/seller/chat?store=${encodeURIComponent(product.TenCuaHang)}`);
+    } else if (isAdmin(currentUser)) {
+      navigate(`/admin/messages?store=${encodeURIComponent(product.TenCuaHang)}`);
+    }
+  };
+
+  const handleBack = () => {
+    if (isAdminView) {
+      navigate('/admin/products');
+    } else {
+      navigate(-1);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center text-text-muted">Đang tải dữ liệu...</div>;
   if (!product) return <div className="p-8 text-center text-text-muted">Không tìm thấy sản phẩm</div>;
 
   return (
     <div className="product-detail-page space-y-4 max-w-[1200px] mx-auto w-full">
       {/* 1. Header (Breadcrumb style) */}
-      <div className="flex items-center text-sm text-text-muted hover:text-text-main transition-colors cursor-pointer w-fit" onClick={() => navigate('/admin/products')}>
-        <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại danh sách sản phẩm
+      <div className="flex items-center text-sm text-text-muted hover:text-text-main transition-colors cursor-pointer w-fit" onClick={handleBack}>
+        <ArrowLeft className="w-4 h-4 mr-1" /> {isAdminView ? 'Quay lại danh sách sản phẩm' : 'Quay lại'}
       </div>
 
       {/* 2. Main Layout: 2 Cards (Trái: Ảnh, Phải: Thông tin) */}
@@ -186,7 +326,14 @@ const ProductDetail = () => {
           style={{ height: leftHeight === 'auto' ? 'auto' : `${leftHeight}px` }}
         >
           {/* Card Phải: Thông tin cơ bản */}
-          <ProductInfo product={product} handleAction={handleAction} onSelectVariantImage={setActiveImageUrl} />
+          <ProductInfo 
+            product={product} 
+            handleAction={handleAction} 
+            onSelectVariantImage={setActiveImageUrl} 
+            role={role}
+            onAddToCart={handleAddToCart}
+            onBuyNow={handleBuyNow}
+          />
           
           {/* 2.5 Mô tả sản phẩm (Card riêng biệt nằm dưới thông tin cơ bản) */}
           <ProductDescription product={product} />
@@ -194,7 +341,7 @@ const ProductDetail = () => {
       </div>
 
       {/* 3. Shop Info Banner */}
-      <ProductShopInfo product={product} />
+      <ProductShopInfo product={product} onContact={handleContactSeller} />
 
       {/* 4. Bottom Block (Đánh giá) */}
       <ProductReviews product={product} />

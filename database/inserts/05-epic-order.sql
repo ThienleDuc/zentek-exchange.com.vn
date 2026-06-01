@@ -61,3 +61,5 @@ WHERE NOT EXISTS (SELECT 1 FROM ChiTietDonHang ct
                   JOIN SanPham sp ON ct.SanPhamId = sp.MaSanPham
                   WHERE n.TenDangNhap = src.TenDangNhapBuyer AND sp.LinkSanPham = src.LinkSanPham);
 GO
+
+---------------Tính toán nhân lên số lượng------------------

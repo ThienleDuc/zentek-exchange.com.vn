@@ -13,7 +13,7 @@ interface SearchableDropdownProps {
   placeholder?: string;
   disabled?: boolean;
   error?: boolean;
-  theme?: 'default' | 'admin';
+  theme?: 'default' | 'admin' | 'light' | 'dark';
 }
 
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
@@ -103,7 +103,16 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     return `searchable-dropdown-empty`;
   };
 
-  const containerClasses = theme === 'admin' ? "relative w-full" : "searchable-dropdown-container";
+  const getSpanClasses = () => {
+    if (theme === 'admin') {
+      return !selectedOption ? "text-text-muted truncate" : "truncate";
+    }
+    return !selectedOption ? "placeholder-text truncate" : "selected-text truncate";
+  };
+
+  const containerClasses = theme === 'admin' 
+    ? "relative w-full" 
+    : `searchable-dropdown-container theme-${theme}`;
 
   return (
     <div className={containerClasses} ref={containerRef}>
@@ -111,10 +120,10 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         className={getHeaderClasses()}
         onClick={toggleDropdown}
       >
-        <span style={theme === 'default' ? { color: selectedOption ? '#ffffff' : 'rgba(255, 255, 255, 0.4)' } : { color: selectedOption ? 'inherit' : 'var(--text-muted)' }} className={theme === 'admin' && !selectedOption ? "text-text-muted" : "truncate"}>
+        <span className={getSpanClasses()}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
-        <ChevronDown size={16} className={theme === 'default' ? "searchable-dropdown-icon" : `text-text-muted transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown size={16} className={theme === 'admin' ? `text-text-muted transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}` : "searchable-dropdown-icon"} />
       </div>
 
       {isOpen && !disabled && (

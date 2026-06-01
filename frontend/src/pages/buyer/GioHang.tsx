@@ -69,12 +69,20 @@ const Cart: React.FC = () => {
     setLoading(true);
     console.log('[API Giả lập] GET /api/cart');
     await new Promise(resolve => setTimeout(resolve, 1000));
-    setItems(mockCartItems);
+    
+    const stored = localStorage.getItem('cart_items');
+    let cartList = stored ? JSON.parse(stored) : [];
+    if (cartList.length === 0) {
+      cartList = mockCartItems;
+      localStorage.setItem('cart_items', JSON.stringify(cartList));
+    }
+
+    setItems(cartList);
     // Mặc định chọn tất cả sản phẩm còn hàng
     const initialSelected = new Set(
-      mockCartItems.filter(item => !item.daHetHang).map(item => item.maChiTietGioHang)
+      cartList.filter((item: any) => !item.daHetHang).map((item: any) => item.maChiTietGioHang)
     );
-    setSelectedIds(initialSelected);
+    setSelectedIds(initialSelected as Set<string>);
     setLoading(false);
   }, []);
 
@@ -95,11 +103,11 @@ const Cart: React.FC = () => {
     setUpdatingItemId(itemId);
     console.log(`[API Giả lập] PUT /api/cart/update`, { itemId, newQuantity });
     await new Promise(resolve => setTimeout(resolve, 500));
-    setItems(prev =>
-      prev.map(i =>
-        i.maChiTietGioHang === itemId ? { ...i, soLuong: newQuantity } : i
-      )
+    const updated = items.map(i =>
+      i.maChiTietGioHang === itemId ? { ...i, soLuong: newQuantity } : i
     );
+    setItems(updated);
+    localStorage.setItem('cart_items', JSON.stringify(updated));
     setUpdatingItemId(null);
   };
 
@@ -110,6 +118,7 @@ const Cart: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 500));
     const newItems = items.filter(i => i.maChiTietGioHang !== itemId);
     setItems(newItems);
+    localStorage.setItem('cart_items', JSON.stringify(newItems));
     const newSelected = new Set(selectedIds);
     newSelected.delete(itemId);
     setSelectedIds(newSelected);

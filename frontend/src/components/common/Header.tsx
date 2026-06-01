@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { PATHS } from '../../utils/path.utils';
 import { storage } from '../../utils/storage.utils';
 import { isBuyer, isSeller, type User } from '../../utils/role.utils';
-import { User as UserIcon, LogOut, Store, ShoppingBag, ChevronDown, Search, ShoppingCart } from 'lucide-react';
+import { User as UserIcon, LogOut, Store, ShoppingBag, ChevronDown, Search, ShoppingCart, X } from 'lucide-react';
 import CategoryNav from './CategoryNav';
 
 const Header: React.FC = () => {
@@ -34,6 +34,25 @@ const Header: React.FC = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`${PATHS.PUPLIC.SEARCH}?q=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      if (location.pathname === PATHS.PUPLIC.SEARCH) {
+        const searchParams = new URLSearchParams(location.search);
+        searchParams.delete('q');
+        const searchStr = searchParams.toString();
+        navigate(`${PATHS.PUPLIC.SEARCH}${searchStr ? `?${searchStr}` : ''}`, { replace: true });
+      } else {
+        navigate(PATHS.PUPLIC.SEARCH);
+      }
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    if (location.pathname === PATHS.PUPLIC.SEARCH) {
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.delete('q');
+      const searchStr = searchParams.toString();
+      navigate(`${PATHS.PUPLIC.SEARCH}${searchStr ? `?${searchStr}` : ''}`, { replace: true });
     }
   };
 
@@ -83,14 +102,23 @@ const Header: React.FC = () => {
 
           {/* Thanh tìm kiếm */}
           <div className="flex-1 max-w-2xl mx-8 hidden md:block">
-            <form onSubmit={handleSearchSubmit} className="flex items-stretch border-2 border-primary rounded-lg overflow-hidden bg-white">
+            <form onSubmit={handleSearchSubmit} className="flex items-stretch border-2 border-primary rounded-lg overflow-hidden bg-white relative">
               <input 
                 type="text" 
                 placeholder="Tìm kiếm sản phẩm, thương hiệu..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 px-4 py-2 bg-transparent text-gray-700 placeholder-gray-400 focus:outline-none border-none min-w-0"
+                className="flex-1 pl-4 pr-12 py-2 bg-transparent text-gray-700 placeholder-gray-400 focus:outline-none border-none min-w-0"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-20 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none border-none bg-transparent cursor-pointer p-1"
+                >
+                  <X size={18} />
+                </button>
+              )}
               <button type="submit" className="bg-primary px-6 text-white hover:bg-primary-hover transition-colors flex items-center justify-center border-none cursor-pointer !rounded-none">
                 <Search size={20} />
               </button>

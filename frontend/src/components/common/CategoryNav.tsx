@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import * as Icons from 'lucide-react';
 import { getUserFromStorage, isBuyer } from '../../utils/role.utils';
 import { PUBLIC_NAV_ITEMS, BUYER_NAV_ITEMS } from '../../utils/nav.utils';
@@ -22,6 +22,7 @@ const DynamicIcon = ({ iconName, size = 20 }: { iconName: string; size?: number 
 };
 
 const CategoryNav: React.FC = () => {
+  const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const currentUser = getUserFromStorage();
@@ -87,7 +88,10 @@ const CategoryNav: React.FC = () => {
                 <ul className="w-1/4 border-r border-gray-100 bg-gray-50/50 py-2">
                 {categories.map((cat) => (
                   <li key={cat.MaDanhMuc} className="category-item-level1 group static">
-                    <div className="flex items-center justify-between px-4 py-3 hover:bg-white hover:text-blue-600 hover:shadow-sm cursor-pointer transition-colors">
+                    <div 
+                      onClick={() => navigate(`/search?category=${cat.MaDanhMuc}`)}
+                      className="flex items-center justify-between px-4 py-3 hover:bg-white hover:text-blue-600 hover:shadow-sm cursor-pointer transition-colors"
+                    >
                       <div className="flex items-center gap-3">
                         <DynamicIcon iconName={cat.Icon} size={18} />
                         <span className="font-medium text-sm">{cat.TenDanhMuc}</span>
@@ -98,7 +102,10 @@ const CategoryNav: React.FC = () => {
                     {/* Panel phải: Danh mục cấp 2 (Hiển thị khi hover vào cấp 1) */}
                     {cat.children && cat.children.length > 0 && (
                       <div className="category-submenu absolute top-0 left-1/4 w-3/4 min-h-full bg-white p-6 hidden group-hover:block z-50 shadow-[4px_0_16px_rgba(0,0,0,0.04)] border-l border-gray-100 rounded-br-2xl">
-                        <h3 className="font-semibold text-lg text-gray-900 mb-4 pb-2 border-b border-gray-100">
+                        <h3 
+                          onClick={() => navigate(`/search?category=${cat.MaDanhMuc}`)}
+                          className="font-semibold text-lg text-gray-900 mb-4 pb-2 border-b border-gray-100 cursor-pointer hover:text-blue-600 transition-colors"
+                        >
                           {cat.TenDanhMuc}
                         </h3>
                         <div className="grid grid-cols-3 gap-x-8 gap-y-4">

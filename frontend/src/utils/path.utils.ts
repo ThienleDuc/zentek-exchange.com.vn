@@ -44,7 +44,8 @@ export const PATHS = {
     HOME: '/',
     SEARCH: '/search',
     STORES: '/stores',
-    PRODUCTS: '/products'
+    PRODUCTS: '/products',
+    PRODUCT_DETAIL: '/san-pham/:id'
   }
 };
 

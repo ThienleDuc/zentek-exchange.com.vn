@@ -2,11 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  BarChart, Bar, Cell
+  BarChart, Bar
 } from 'recharts';
 
 // ==================== MOCK DATA & API GIẢ LẬP ====================
-const SHOP_ID = 'shop-001';
 
 const mockKpiData = {
   totalRevenue: 245800000,
@@ -154,7 +153,7 @@ const SellerDashboard: React.FC = () => {
                 <XAxis dataKey="date" />
                 <YAxis yAxisId="left" tickFormatter={(v) => `${(v / 1e6).toFixed(0)}M`} />
                 <YAxis yAxisId="right" orientation="right" />
-                <Tooltip formatter={(v: number, name: string) => name === 'revenue' ? formatCurrency(v) : v} />
+                <Tooltip formatter={(v: any, name: any) => name === 'revenue' ? formatCurrency(v) : v} />
                 <Legend />
                 <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#10b981" name="Doanh thu" />
                 <Line yAxisId="right" type="monotone" dataKey="orders" stroke="#f59e0b" name="Số đơn" />

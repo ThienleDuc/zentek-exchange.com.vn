@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Store, Building2, UserCircle, CheckCircle2, XCircle, Filter, Plus, Eye, Edit, Shield } from 'lucide-react';
+import { Search, Store, Building2, UserCircle, CheckCircle2, Plus, Eye, Edit, Shield } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, CartesianGrid, XAxis, YAxis } from 'recharts';
 import api from '../../services/api';
 import Pagination from '../../components/common/Pagination';
@@ -44,7 +44,7 @@ const ShopManagement = () => {
 
   // Filter & Pagination state
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');

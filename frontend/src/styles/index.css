@@ -17,9 +17,10 @@
 @import './pages/donmua.css';
 @import './pages/hoadonbanhang.css';
 @import './pages/cart.css';
-@import './pages/checkout.css';
+@import './pages/Checkout.css';
 @import './pages/seller-dashboard.css';
 @import './pages/seller-profile.css';
+@import './pages/AdminDashboard.css';
 
 /* -- COMPONENTS -- */
 @import './components/searchable-dropdown.css';

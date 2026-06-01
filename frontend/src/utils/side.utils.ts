@@ -1,5 +1,4 @@
 import {ROLE_NAMES, type RoleNames } from "./role.utils";
-import { PATHS } from "./path.utils";
 
 export interface NavItem {
   path: string;

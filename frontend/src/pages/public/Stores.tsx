@@ -1,7 +1,12 @@
-// frontend/src/pages/Stores.tsx
+// frontend/src/pages/public/Stores.tsx
 import React, { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Star, Store, Package, TrendingUp, CheckCircle, MapPin } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Star, Store as StoreIcon, Package, TrendingUp, CheckCircle, MapPin } from 'lucide-react';
+import { storeService } from '../../services/store.service';
+import { SERVER_URL } from '../../services/api';
+import SearchableDropdown from '../../components/SearchableDropdown';
+import { getProvinces, getDistricts, getWards, type Province, type District, type Ward } from '../../services/location.service';
+import PaginationProduct from '../../components/common/PaginationProduct';
 
 // --- Helper: format số lượng (k+) ---
 const formatNumber = (num: number): string => {
@@ -28,57 +33,6 @@ const renderStars = (rating: number) => {
   );
 };
 
-// --- Dữ liệu giả (mock stores) ---
-const generateMockStores = (count: number) => {
-  const stores = [];
-  const provinces = ['Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ', 'Bình Dương', 'Đồng Nai'];
-  const businessTypes = [
-    { id: 1, name: 'Cá nhân' },
-    { id: 2, name: 'Hộ kinh doanh' },
-    { id: 3, name: 'Doanh nghiệp nhỏ' },
-  ];
-  const categories = ['Điện thoại', 'Laptop', 'Linh kiện', 'Âm thanh', 'Phụ kiện'];
-  const storeNames = [
-    'ZenTek Official', 'TechPro Việt Nam', 'GearVN', 'CellphoneS', 'LaptopAZ', 'AudioHouse',
-    'AnPhat Computer', 'Phong Vũ', 'Thế giới di động', 'FPT Shop', 'MediaMart', 'Hoàng Hà Mobile'
-  ];
-
-  for (let i = 1; i <= count; i++) {
-    const id = `store_${i}`;
-    const name = `${storeNames[i % storeNames.length]} ${i}`;
-    const logo = i % 7 === 0 ? null : `https://picsum.photos/id/${(i % 50) + 100}/200/200`;
-    const province = provinces[i % provinces.length];
-    const businessType = businessTypes[i % businessTypes.length];
-    const verified = i % 5 !== 0;
-    const totalProducts = 10 + Math.floor(Math.random() * 200);
-    const totalSold = 100 + Math.floor(Math.random() * 50000);
-    const avgRating = parseFloat((Math.random() * 2 + 3).toFixed(1));
-    const totalReviews = Math.floor(Math.random() * 300);
-    const joinDate = new Date(Date.now() - Math.random() * 2 * 365 * 24 * 3600000);
-    const description = `Chuyên cung cấp các sản phẩm ${categories[i % categories.length]} chất lượng cao. Uy tín hàng đầu.`;
-
-    stores.push({
-      MaCuaHang: id,
-      TenCuaHang: name,
-      Logo: logo,
-      MoTa: description,
-      TinhThanh: province,      // Chỉ lưu tỉnh thành
-      LoaiHinh: businessType.id,
-      LoaiHinhTen: businessType.name,
-      DaXacThucPhapLy: verified,
-      SoSanPham: totalProducts,
-      SoLuongDaBan: totalSold,
-      DiemDanhGia: avgRating,
-      SoLuongDanhGia: totalReviews,
-      NgayTao: joinDate.toISOString(),
-      NguoiBanHoTen: `Chủ shop ${name}`,
-    });
-  }
-  return stores;
-};
-
-const allMockStores = generateMockStores(80);
-
 interface Store {
   MaCuaHang: string;
   TenCuaHang: string;
@@ -98,70 +52,47 @@ interface Store {
 
 interface Filters {
   search: string;
-  categoryIds: string[];
   minRating: number;
   province: string;
+  district: string;
+  ward: string;
   businessType: string;
   verified: boolean;
   sort: string;
   page: number;
 }
 
-// Hàm lọc cửa hàng giả định
-const filterStores = (stores: Store[], filters: Filters): { filtered: Store[]; total: number } => {
-  let filtered = [...stores];
-  
-  if (filters.search) {
-    const kw = filters.search.toLowerCase();
-    filtered = filtered.filter(s => s.TenCuaHang.toLowerCase().includes(kw));
-  }
-  
-  if (filters.province) {
-    filtered = filtered.filter(s => s.TinhThanh === filters.province);
-  }
-  
-  if (filters.businessType) {
-    filtered = filtered.filter(s => s.LoaiHinhTen === filters.businessType);
-  }
-  
-  if (filters.verified) {
-    filtered = filtered.filter(s => s.DaXacThucPhapLy === true);
-  }
-  
-  if (filters.minRating > 0) {
-    filtered = filtered.filter(s => s.DiemDanhGia >= filters.minRating);
-  }
-  
-  switch (filters.sort) {
-    case 'name_asc':
-      filtered.sort((a, b) => a.TenCuaHang.localeCompare(b.TenCuaHang));
-      break;
-    case 'name_desc':
-      filtered.sort((a, b) => b.TenCuaHang.localeCompare(a.TenCuaHang));
-      break;
-    case 'newest':
-      filtered.sort((a, b) => new Date(b.NgayTao).getTime() - new Date(a.NgayTao).getTime());
-      break;
-    case 'top_rated':
-      filtered.sort((a, b) => b.DiemDanhGia - a.DiemDanhGia);
-      break;
-    case 'best_seller':
-      filtered.sort((a, b) => b.SoLuongDaBan - a.SoLuongDaBan);
-      break;
-    case 'most_products':
-      filtered.sort((a, b) => b.SoSanPham - a.SoSanPham);
-      break;
-    default:
-      break;
-  }
-  return { filtered, total: filtered.length };
-};
+interface FilterSidebarProps {
+  filters: Filters;
+  provinces: Province[];
+  districts: District[];
+  wards: Ward[];
+  selectedLocation: {
+    provinceCode: string | number;
+    districtCode: string | number;
+    wardCode: string | number;
+  };
+  handleProvinceChange: (val: string | number) => void;
+  handleDistrictChange: (val: string | number) => void;
+  handleWardChange: (val: string | number) => void;
+  onFilterChange: (newFilters: Partial<Filters>) => void;
+  onReset: () => void;
+}
 
-// Component Sidebar bộ lọc (giữ nguyên, chỉ lọc theo tỉnh từ `TinhThanh`)
-const FilterSidebar: React.FC<{ filters: Filters; onFilterChange: (newFilters: Partial<Filters>) => void; onReset: () => void }> = 
-({ filters, onFilterChange, onReset }) => {
-  const provinces = [...new Set(allMockStores.map(s => s.TinhThanh))];
-  const businessTypes = [...new Set(allMockStores.map(s => s.LoaiHinhTen))];
+// Component Sidebar bộ lọc
+const FilterSidebar: React.FC<FilterSidebarProps> = ({
+  filters,
+  provinces,
+  districts,
+  wards,
+  selectedLocation,
+  handleProvinceChange,
+  handleDistrictChange,
+  handleWardChange,
+  onFilterChange,
+  onReset,
+}) => {
+  const businessTypes = ['Cá nhân', 'Hộ kinh doanh', 'Doanh nghiệp nhỏ'];
   
   return (
     <aside className="stores-sidebar">
@@ -171,13 +102,38 @@ const FilterSidebar: React.FC<{ filters: Filters; onFilterChange: (newFilters: P
       </div>
       
       <div className="filter-group">
-        <label className="filter-label">Địa điểm (Tỉnh/Thành)</label>
-        <select value={filters.province} onChange={(e) => onFilterChange({ province: e.target.value, page: 1 })}>
-          <option value="">Tất cả</option>
-          {provinces.map(prov => (
-            <option key={prov} value={prov}>{prov}</option>
-          ))}
-        </select>
+        <label className="filter-label">Tỉnh / Thành</label>
+        <SearchableDropdown
+          theme="light"
+          options={provinces.map(p => ({ value: p.code, label: p.name }))}
+          value={selectedLocation.provinceCode}
+          onChange={handleProvinceChange}
+          placeholder="Chọn Tỉnh/Thành"
+        />
+      </div>
+
+      <div className="filter-group">
+        <label className="filter-label">Quận / Huyện</label>
+        <SearchableDropdown
+          theme="light"
+          options={districts.map(d => ({ value: d.code, label: d.name }))}
+          value={selectedLocation.districtCode}
+          onChange={handleDistrictChange}
+          placeholder="Chọn Quận/Huyện"
+          disabled={!selectedLocation.provinceCode}
+        />
+      </div>
+
+      <div className="filter-group">
+        <label className="filter-label">Xã / Phường</label>
+        <SearchableDropdown
+          theme="light"
+          options={wards.map(w => ({ value: w.code, label: w.name }))}
+          value={selectedLocation.wardCode}
+          onChange={handleWardChange}
+          placeholder="Chọn Xã/Phường"
+          disabled={!selectedLocation.districtCode}
+        />
       </div>
       
       <div className="filter-group">
@@ -188,14 +144,6 @@ const FilterSidebar: React.FC<{ filters: Filters; onFilterChange: (newFilters: P
             <option key={type} value={type}>{type}</option>
           ))}
         </select>
-      </div>
-      
-      <div className="filter-group">
-        <label className="filter-label">Xác thực</label>
-        <label className="checkbox-label">
-          <input type="checkbox" checked={filters.verified} onChange={(e) => onFilterChange({ verified: e.target.checked, page: 1 })} />
-          <span>Đã xác thực pháp lý</span>
-        </label>
       </div>
       
       <div className="filter-group">
@@ -219,15 +167,17 @@ const FilterSidebar: React.FC<{ filters: Filters; onFilterChange: (newFilters: P
 
 // Component chính Stores
 const Stores: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   
   const initialFilters: Filters = {
     search: searchParams.get('search') || '',
-    categoryIds: searchParams.get('categoryIds')?.split(',') || [],
     minRating: searchParams.get('minRating') ? Number(searchParams.get('minRating')) : 0,
     province: searchParams.get('province') || '',
+    district: searchParams.get('district') || '',
+    ward: searchParams.get('ward') || '',
     businessType: searchParams.get('businessType') || '',
-    verified: searchParams.get('verified') === 'true',
+    verified: true,
     sort: searchParams.get('sort') || '',
     page: searchParams.get('page') ? Number(searchParams.get('page')) : 1,
   };
@@ -238,46 +188,224 @@ const Stores: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const limit = 12;
+
+  // State cho dropdown địa chỉ
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState({
+    provinceCode: '' as string | number,
+    districtCode: '' as string | number,
+    wardCode: '' as string | number
+  });
+
+  // Load provinces and initialize from URL search params
+  useEffect(() => {
+    const initLocation = async () => {
+      try {
+        const provsList = await getProvinces();
+        setProvinces(provsList);
+
+        const urlProv = searchParams.get('province') || '';
+        const urlDist = searchParams.get('district') || '';
+        const urlWard = searchParams.get('ward') || '';
+
+        if (urlProv) {
+          const matchingProv = provsList.find(p => p.name === urlProv);
+          if (matchingProv) {
+            const provCode = matchingProv.code;
+            setSelectedLocation(prev => ({ ...prev, provinceCode: provCode }));
+            const distsList = await getDistricts(provCode);
+            setDistricts(distsList);
+
+            if (urlDist) {
+              const matchingDist = distsList.find(d => d.name === urlDist);
+              if (matchingDist) {
+                const distCode = matchingDist.code;
+                setSelectedLocation(prev => ({ ...prev, districtCode: distCode }));
+                const wardsList = await getWards(distCode);
+                setWards(wardsList);
+
+                if (urlWard) {
+                  const matchingWard = wardsList.find(w => w.name === urlWard);
+                  if (matchingWard) {
+                    setSelectedLocation(prev => ({ ...prev, wardCode: matchingWard.code }));
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi khởi tạo địa điểm:', err);
+      }
+    };
+    initLocation();
+  }, []);
   
   const fetchStores = useCallback(async (currentFilters: Filters) => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 400));
-    const { filtered, total: totalCount } = filterStores(allMockStores, currentFilters);
-    const start = (currentFilters.page - 1) * limit;
-    const paged = filtered.slice(start, start + limit);
-    setStores(paged);
-    setTotal(totalCount);
-    setLoading(false);
+    try {
+      const response = await storeService.getStores({
+        search: currentFilters.search,
+        province: currentFilters.province,
+        district: currentFilters.district,
+        ward: currentFilters.ward,
+        businessType: currentFilters.businessType,
+        verified: currentFilters.verified,
+        minRating: currentFilters.minRating,
+        sort: currentFilters.sort,
+        page: currentFilters.page,
+        limit
+      });
+      if (response.success && response.data) {
+        setStores(response.data);
+        setTotal(response.total);
+      }
+    } catch (error) {
+      console.error('Lỗi lấy danh sách cửa hàng:', error);
+    } finally {
+      setLoading(false);
+    }
   }, [limit]);
-  
+
+  // Cập nhật khi URL searchParams đổi: đồng bộ state filters và fetch
   useEffect(() => {
-    const params: Record<string, string> = {};
-    if (filters.search) params.search = filters.search;
-    if (filters.minRating > 0) params.minRating = String(filters.minRating);
-    if (filters.province) params.province = filters.province;
-    if (filters.businessType) params.businessType = filters.businessType;
-    if (filters.verified) params.verified = 'true';
-    if (filters.sort) params.sort = filters.sort;
-    if (filters.page > 1) params.page = String(filters.page);
-    setSearchParams(params, { replace: true });
-    fetchStores(filters);
-  }, [filters, setSearchParams, fetchStores]);
-  
+    const urlSearch = searchParams.get('search') || '';
+    const urlMinRating = searchParams.get('minRating') ? Number(searchParams.get('minRating')) : 0;
+    const urlProvince = searchParams.get('province') || '';
+    const urlDistrict = searchParams.get('district') || '';
+    const urlWard = searchParams.get('ward') || '';
+    const urlBusinessType = searchParams.get('businessType') || '';
+    const urlSort = searchParams.get('sort') || '';
+    const urlPage = searchParams.get('page') ? Number(searchParams.get('page')) : 1;
+
+    const newFilters: Filters = {
+      search: urlSearch,
+      minRating: urlMinRating,
+      province: urlProvince,
+      district: urlDistrict,
+      ward: urlWard,
+      businessType: urlBusinessType,
+      verified: true,
+      sort: urlSort,
+      page: urlPage
+    };
+
+    setFilters(newFilters);
+    fetchStores(newFilters);
+
+    if (!urlProvince) {
+      setSelectedLocation({
+        provinceCode: '',
+        districtCode: '',
+        wardCode: ''
+      });
+      setDistricts([]);
+      setWards([]);
+    }
+  }, [searchParams, fetchStores]);
+
+  // Hàm thay đổi filter bằng cách cập nhật URL searchParams
   const updateFilter = (newFilter: Partial<Filters>) => {
-    setFilters(prev => ({ ...prev, ...newFilter }));
+    const params = new URLSearchParams(searchParams);
+    
+    Object.entries(newFilter).forEach(([key, val]) => {
+      if (val === '' || val === null || val === undefined || val === 0 || (key === 'verified' && val === true)) {
+        params.delete(key);
+      } else {
+        params.set(key, String(val));
+      }
+    });
+
+    if (newFilter.page === undefined) {
+      params.delete('page');
+    }
+
+    setSearchParams(params, { replace: true });
+  };
+
+  const handleProvinceChange = async (val: string | number) => {
+    const provinceCode = Number(val);
+    const provinceName = provinces.find(p => p.code === provinceCode)?.name || '';
+    
+    updateFilter({
+      province: provinceName,
+      district: '',
+      ward: '',
+    });
+
+    setSelectedLocation({
+      provinceCode,
+      districtCode: '',
+      wardCode: ''
+    });
+
+    setDistricts([]);
+    setWards([]);
+
+    if (provinceCode) {
+      const distsList = await getDistricts(provinceCode);
+      setDistricts(distsList);
+    }
+  };
+
+  const handleDistrictChange = async (val: string | number) => {
+    const districtCode = Number(val);
+    const districtName = districts.find(d => d.code === districtCode)?.name || '';
+
+    updateFilter({
+      district: districtName,
+      ward: '',
+    });
+
+    setSelectedLocation(prev => ({
+      ...prev,
+      districtCode,
+      wardCode: ''
+    }));
+
+    setWards([]);
+
+    if (districtCode) {
+      const wardsList = await getWards(districtCode);
+      setWards(wardsList);
+    }
+  };
+
+  const handleWardChange = (val: string | number) => {
+    const wardCode = Number(val);
+    const wardName = wards.find(w => w.code === wardCode)?.name || '';
+
+    updateFilter({
+      ward: wardName,
+    });
+
+    setSelectedLocation(prev => ({
+      ...prev,
+      wardCode
+    }));
   };
   
   const resetFilters = () => {
-    setFilters({
-      search: '',
-      categoryIds: [],
-      minRating: 0,
-      province: '',
-      businessType: '',
-      verified: false,
-      sort: '',
-      page: 1,
+    const params = new URLSearchParams();
+    const search = searchParams.get('search');
+    if (search) params.set('search', search);
+    setSearchParams(params, { replace: true });
+
+    setSelectedLocation({
+      provinceCode: '',
+      districtCode: '',
+      wardCode: ''
     });
+    setDistricts([]);
+    setWards([]);
+  };
+
+  const getLogoUrl = (path: string | null) => {
+    if (!path) return '';
+    if (path.startsWith('http') || path.startsWith('blob:')) return path;
+    return `${SERVER_URL}${path}`;
   };
   
   const totalPages = Math.ceil(total / limit);
@@ -285,16 +413,38 @@ const Stores: React.FC = () => {
   return (
     <main className="page-stores">
       <div className="stores-container">
-        <FilterSidebar filters={filters} onFilterChange={updateFilter} onReset={resetFilters} />
+        <FilterSidebar 
+          filters={filters} 
+          provinces={provinces}
+          districts={districts}
+          wards={wards}
+          selectedLocation={selectedLocation}
+          handleProvinceChange={handleProvinceChange}
+          handleDistrictChange={handleDistrictChange}
+          handleWardChange={handleWardChange}
+          onFilterChange={updateFilter} 
+          onReset={resetFilters} 
+        />
         
         <button className="mobile-filter-toggle" onClick={() => setMobileFilterOpen(true)}>
-          <Store size={18} /> Bộ lọc
+          <StoreIcon size={18} /> Bộ lọc
         </button>
         
         {mobileFilterOpen && (
           <div className="mobile-filter-overlay" onClick={() => setMobileFilterOpen(false)}>
             <div className="mobile-filter-drawer" onClick={(e) => e.stopPropagation()}>
-              <FilterSidebar filters={filters} onFilterChange={updateFilter} onReset={resetFilters} />
+              <FilterSidebar 
+                filters={filters} 
+                provinces={provinces}
+                districts={districts}
+                wards={wards}
+                selectedLocation={selectedLocation}
+                handleProvinceChange={handleProvinceChange}
+                handleDistrictChange={handleDistrictChange}
+                handleWardChange={handleWardChange}
+                onFilterChange={updateFilter} 
+                onReset={resetFilters} 
+              />
               <button className="close-drawer" onClick={() => setMobileFilterOpen(false)}>Đóng</button>
             </div>
           </div>
@@ -351,15 +501,14 @@ const Stores: React.FC = () => {
                   key={store.MaCuaHang}
                   className="store-card"
                   onClick={() => {
-                    console.log(`[API giả định] Điều hướng đến /cua-hang/${store.MaCuaHang}`);
-                    alert(`Trang chi tiết: ${store.TenCuaHang}`);
+                    navigate(`/cua-hang/${store.MaCuaHang}`);
                   }}
                 >
                   <div className="store-logo">
                     {store.Logo ? (
-                      <img src={store.Logo} alt={store.TenCuaHang} loading="lazy" />
+                      <img src={getLogoUrl(store.Logo)} alt={store.TenCuaHang} loading="lazy" />
                     ) : (
-                      <div className="logo-placeholder"><Store size={32} /></div>
+                      <div className="logo-placeholder"><StoreIcon size={32} /></div>
                     )}
                   </div>
                   <div className="store-info">
@@ -394,40 +543,11 @@ const Stores: React.FC = () => {
             )}
           </div>
           
-          {!loading && totalPages > 1 && (
-            <div className="pagination">
-              <button
-                disabled={filters.page === 1}
-                onClick={() => updateFilter({ page: filters.page - 1 })}
-                className="pagination-btn"
-              >
-                ‹ Trước
-              </button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum = filters.page;
-                if (totalPages <= 5) pageNum = i + 1;
-                else if (filters.page <= 3) pageNum = i + 1;
-                else if (filters.page >= totalPages - 2) pageNum = totalPages - 4 + i;
-                else pageNum = filters.page - 2 + i;
-                return (
-                  <button
-                    key={pageNum}
-                    className={`pagination-btn ${pageNum === filters.page ? 'active' : ''}`}
-                    onClick={() => updateFilter({ page: pageNum })}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              <button
-                disabled={filters.page === totalPages}
-                onClick={() => updateFilter({ page: filters.page + 1 })}
-                className="pagination-btn"
-              >
-                Sau ›
-              </button>
-            </div>
-          )}
+          <PaginationProduct
+            currentPage={filters.page}
+            totalPages={totalPages}
+            onPageChange={(page) => updateFilter({ page })}
+          />
         </div>
       </div>
     </main>

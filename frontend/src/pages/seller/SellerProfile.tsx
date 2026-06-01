@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { getProvinces, getProvinceTree } from '../../services/location.service';
+import SearchableDropdown from '../../components/SearchableDropdown';
 
 // ==================== MOCK DATA & API GIẢ LẬP ====================
 // Dữ liệu mặc định
@@ -27,42 +29,6 @@ const defaultShop = {
   pdfGiayPhep: '/licenses/shop-license.pdf',
   daXacThucPhapLy: true,
   ngayTao: '2024-02-01T00:00:00Z',
-};
-
-// Mock danh sách tỉnh/thành
-const mockTinhThanh = [
-  { code: 'HN', name: 'Hà Nội' },
-  { code: 'HCM', name: 'Hồ Chí Minh' },
-  { code: 'DN', name: 'Đà Nẵng' },
-];
-
-// Mock quận/huyện theo tỉnh
-const mockQuanHuyen: Record<string, { code: string; name: string }[]> = {
-  HN: [
-    { code: 'DD', name: 'Đống Đa' },
-    { code: 'CG', name: 'Cầu Giấy' },
-    { code: 'HB', name: 'Hai Bà Trưng' },
-  ],
-  HCM: [
-    { code: 'Q1', name: 'Quận 1' },
-    { code: 'Q3', name: 'Quận 3' },
-    { code: 'TB', name: 'Tân Bình' },
-  ],
-  DN: [
-    { code: 'HC', name: 'Hải Châu' },
-    { code: 'TN', name: 'Thanh Khê' },
-  ],
-};
-
-// Mock phường/xã theo quận/huyện
-const mockPhuongXa: Record<string, { code: string; name: string }[]> = {
-  DD: [
-    { code: 'LT', name: 'Láng Thượng' },
-    { code: 'QTG', name: 'Quang Trung' },
-  ],
-  CG: [{ code: 'DQ', name: 'Dịch Vọng' }],
-  Q1: [{ code: 'BT', name: 'Bến Thành' }],
-  // ... thêm nếu cần
 };
 
 const fetchProfile = (): Promise<{ user: any; shop: any }> => {
@@ -118,25 +84,37 @@ const SellerProfile: React.FC = () => {
   const [logoPreview, setLogoPreview] = useState<string>('');
 
   // State cho dropdown địa chỉ
-  const [listTinh, setListTinh] = useState(mockTinhThanh);
-  const [listQuan, setListQuan] = useState<{ code: string; name: string }[]>([]);
-  const [listPhuong, setListPhuong] = useState<{ code: string; name: string }[]>([]);
+  const [listTinh, setListTinh] = useState<any[]>([]);
+  const [listQuan, setListQuan] = useState<any[]>([]);
+  const [listPhuong, setListPhuong] = useState<any[]>([]);
+  const [allDistrictsOfProvince, setAllDistrictsOfProvince] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchProfile().then(({ user, shop }) => {
+    fetchProfile().then(async ({ user, shop }) => {
       setUser(user);
       setShop(shop);
       setAvatarPreview(user.anhDaiDien);
       setLogoPreview(shop.logo);
-      // Cập nhật danh sách quận/huyện, phường/xã theo dữ liệu có sẵn
-      const tinhCode = Object.keys(mockQuanHuyen).find(
-        (code) => mockQuanHuyen[code].some((q) => q.name === shop.quanHuyen)
-      );
-      if (tinhCode) {
-        setListQuan(mockQuanHuyen[tinhCode] || []);
-        const quanCode = mockQuanHuyen[tinhCode]?.find((q) => q.name === shop.quanHuyen)?.code;
-        if (quanCode && mockPhuongXa[quanCode]) {
-          setListPhuong(mockPhuongXa[quanCode]);
+      
+      const provs = await getProvinces();
+      setListTinh(provs);
+      
+      if (shop.tinhThanh) {
+        const selectedProv = provs.find(p => p.name === shop.tinhThanh);
+        if (selectedProv) {
+          const tree = await getProvinceTree(selectedProv.code);
+          if (tree) {
+            setAllDistrictsOfProvince(tree.districts || []);
+            const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
+              ...w,
+              district_code: d.code
+            })));
+            setListPhuong(flatWards);
+            const matchingDist = (tree.districts || []).find(d => d.name === shop.quanHuyen);
+            if (matchingDist) {
+              setListQuan([matchingDist]);
+            }
+          }
         }
       }
       setLoading(false);
@@ -169,33 +147,46 @@ const SellerProfile: React.FC = () => {
   };
 
   // Khi thay đổi tỉnh/thành
-  const handleTinhChange = (tinhName: string) => {
-    const tinhCode = listTinh.find((t) => t.name === tinhName)?.code;
-    if (tinhCode) {
-      const quanList = mockQuanHuyen[tinhCode] || [];
-      setListQuan(quanList);
-      setListPhuong([]);
-      handleShopChange('tinhThanh', tinhName);
-      handleShopChange('quanHuyen', '');
-      handleShopChange('phuongXa', '');
-    } else {
-      handleShopChange('tinhThanh', tinhName);
+  const handleTinhChange = async (tinhName: string) => {
+    handleShopChange('tinhThanh', tinhName);
+    handleShopChange('quanHuyen', '');
+    handleShopChange('phuongXa', '');
+    setListQuan([]);
+    setListPhuong([]);
+    setAllDistrictsOfProvince([]);
+    const selectedProv = listTinh.find(p => p.name === tinhName);
+    if (selectedProv) {
+      const tree = await getProvinceTree(selectedProv.code);
+      if (tree) {
+        setAllDistrictsOfProvince(tree.districts || []);
+        const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
+          ...w,
+          district_code: d.code
+        })));
+        setListPhuong(flatWards);
+      }
+    }
+  };
+
+  // Khi thay đổi phường/xã
+  const handlePhuongChange = (phuongName: string) => {
+    handleShopChange('phuongXa', phuongName);
+    handleShopChange('quanHuyen', '');
+    setListQuan([]);
+    const ward = listPhuong.find(w => w.name === phuongName);
+    if (ward) {
+      const distCode = ward.district_code;
+      const matchingDist = allDistrictsOfProvince.find(d => d.code === distCode);
+      if (matchingDist) {
+        setListQuan([matchingDist]);
+        handleShopChange('quanHuyen', matchingDist.name);
+      }
     }
   };
 
   // Khi thay đổi quận/huyện
   const handleQuanChange = (quanName: string) => {
-    let quanCode = '';
-    for (const q of listQuan) {
-      if (q.name === quanName) {
-        quanCode = q.code;
-        break;
-      }
-    }
-    const phuongList = mockPhuongXa[quanCode] || [];
-    setListPhuong(phuongList);
     handleShopChange('quanHuyen', quanName);
-    handleShopChange('phuongXa', '');
   };
 
   const handleSave = async () => {
@@ -235,14 +226,6 @@ const SellerProfile: React.FC = () => {
   };
 
   const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('vi-VN');
-  const getLoaiHinhText = (type: number) => {
-    switch (type) {
-      case 1: return 'Cá nhân';
-      case 2: return 'Hộ kinh doanh';
-      case 3: return 'Doanh nghiệp nhỏ';
-      default: return 'Không xác định';
-    }
-  };
 
   if (loading) return <div className="seller-profile-page loading">Đang tải...</div>;
   if (!user || !shop) return <div className="seller-profile-page error">Không có dữ liệu</div>;
@@ -342,24 +325,29 @@ const SellerProfile: React.FC = () => {
           <div className="form-group full-width">
             <label>Địa chỉ</label>
             <div className="address-group">
-              <select value={shop.tinhThanh} onChange={(e) => handleTinhChange(e.target.value)}>
-                <option value="">Chọn tỉnh/thành</option>
-                {listTinh.map((t) => (
-                  <option key={t.code} value={t.name}>{t.name}</option>
-                ))}
-              </select>
-              <select value={shop.quanHuyen} onChange={(e) => handleQuanChange(e.target.value)} disabled={!listQuan.length}>
-                <option value="">Chọn quận/huyện</option>
-                {listQuan.map((q) => (
-                  <option key={q.code} value={q.name}>{q.name}</option>
-                ))}
-              </select>
-              <select value={shop.phuongXa} onChange={(e) => handleShopChange('phuongXa', e.target.value)} disabled={!listPhuong.length}>
-                <option value="">Chọn phường/xã</option>
-                {listPhuong.map((p) => (
-                  <option key={p.code} value={p.name}>{p.name}</option>
-                ))}
-              </select>
+              <SearchableDropdown
+                theme="admin"
+                options={listTinh.map((t) => ({ value: t.name, label: t.name }))}
+                value={shop.tinhThanh}
+                onChange={(val) => handleTinhChange(val as string)}
+                placeholder="Chọn Tỉnh/Thành"
+              />
+              <SearchableDropdown
+                theme="admin"
+                options={listPhuong.map((p) => ({ value: p.name, label: p.name }))}
+                value={shop.phuongXa}
+                onChange={(val) => handlePhuongChange(val as string)}
+                placeholder="Chọn Phường/Xã"
+                disabled={!shop.tinhThanh}
+              />
+              <SearchableDropdown
+                theme="admin"
+                options={listQuan.map((q) => ({ value: q.name, label: q.name }))}
+                value={shop.quanHuyen}
+                onChange={(val) => handleQuanChange(val as string)}
+                placeholder="Chọn Quận/Huyện"
+                disabled={!shop.phuongXa}
+              />
               <input
                 type="text"
                 placeholder="Số nhà, đường"
@@ -406,7 +394,7 @@ const SellerProfile: React.FC = () => {
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
             />
             <button className="btn-send-otp" onClick={handleSendOtp} disabled={!user?.soDienThoai}>
-              Gửi mã
+              {otpSent ? 'Gửi lại mã' : 'Gửi mã'}
             </button>
           </div>
           <button className="btn-save" onClick={handleSave} disabled={saving}>

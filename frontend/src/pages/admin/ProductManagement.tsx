@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Package, Shield, TrendingUp, Archive, Store, ChevronDown, ChevronRight } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, BarChart, Bar, CartesianGrid, XAxis, YAxis, LineChart, Line } from 'recharts';
 import api from '../../services/api';

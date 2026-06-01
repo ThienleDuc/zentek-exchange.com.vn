@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Mail, Eye, EyeOff, Loader2, AlertCircle, Store, MapPin, Phone, Lock, Hash, Upload, FileText, CheckCircle2, AlignLeft } from 'lucide-react';
+import { User, Mail, Eye, EyeOff, Loader2, AlertCircle, Store, MapPin, Phone, Lock, Hash, Upload, FileText, CheckCircle2 } from 'lucide-react';
 import { PATHS } from '../../utils/path.utils';
 import { registerSeller, sendOTP } from '../../services/auth.service';
-import { getProvinces, getDistricts, getWards, type Province, type District, type Ward } from '../../services/location.service';
+import { getProvinces, getProvinceTree, type Province, type District, type Ward } from '../../services/location.service';
 import { uploadDocument } from '../../services/upload.service';
 import SearchableDropdown from '../../components/SearchableDropdown';
 
@@ -47,7 +47,7 @@ const RegisterSeller: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -69,6 +69,8 @@ const RegisterSeller: React.FC = () => {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  const [allDistrictsOfProvince, setAllDistrictsOfProvince] = useState<any[]>([]);
+
   const handleProvinceChange = async (val: string | number) => {
     const provinceCode = Number(val);
     const provinceName = provinces.find(p => p.code === provinceCode)?.name || '';
@@ -76,29 +78,43 @@ const RegisterSeller: React.FC = () => {
     setSelectedLocation(prev => ({ ...prev, provinceCode, districtCode: 0, wardCode: 0 }));
     setDistricts([]);
     setWards([]);
+    setAllDistrictsOfProvince([]);
     if (provinceCode) {
-      const dists = await getDistricts(provinceCode);
-      setDistricts(dists);
-    }
-  };
-
-  const handleDistrictChange = async (val: string | number) => {
-    const districtCode = Number(val);
-    const districtName = districts.find(d => d.code === districtCode)?.name || '';
-    setFormData(prev => ({ ...prev, district: districtName, ward: '' }));
-    setSelectedLocation(prev => ({ ...prev, districtCode, wardCode: 0 }));
-    setWards([]);
-    if (districtCode) {
-      const ws = await getWards(districtCode);
-      setWards(ws);
+      const tree = await getProvinceTree(provinceCode);
+      if (tree) {
+        setAllDistrictsOfProvince(tree.districts || []);
+        const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
+          ...w,
+          district_code: d.code
+        })));
+        setWards(flatWards);
+      }
     }
   };
 
   const handleWardChange = (val: string | number) => {
     const wardCode = Number(val);
-    const wardName = wards.find(w => w.code === wardCode)?.name || '';
-    setFormData(prev => ({ ...prev, ward: wardName }));
-    setSelectedLocation(prev => ({ ...prev, wardCode }));
+    const ward = wards.find(w => w.code === wardCode) as any;
+    const wardName = ward?.name || '';
+    setFormData(prev => ({ ...prev, ward: wardName, district: '' }));
+    setSelectedLocation(prev => ({ ...prev, wardCode, districtCode: 0 }));
+    setDistricts([]);
+    if (ward) {
+      const distCode = ward.district_code;
+      const matchingDist = allDistrictsOfProvince.find(d => d.code === distCode);
+      if (matchingDist) {
+        setDistricts([matchingDist]);
+        setFormData(prev => ({ ...prev, district: matchingDist.name }));
+        setSelectedLocation(prev => ({ ...prev, districtCode: matchingDist.code }));
+      }
+    }
+  };
+
+  const handleDistrictChange = (val: string | number) => {
+    const districtCode = Number(val);
+    const districtName = districts.find(d => d.code === districtCode)?.name || '';
+    setFormData(prev => ({ ...prev, district: districtName }));
+    setSelectedLocation(prev => ({ ...prev, districtCode }));
   };
 
   const validateField = (name: string, value: any) => {
@@ -503,26 +519,26 @@ const RegisterSeller: React.FC = () => {
                 </fieldset>
                 
                 <fieldset className="register-field border-none p-0 m-0 mb-4">
-                  <label className="register-label">Quận / Huyện *</label>
-                  <SearchableDropdown
-                    options={districts.map(d => ({ value: d.code, label: d.name }))}
-                    value={selectedLocation.districtCode}
-                    onChange={handleDistrictChange}
-                    placeholder="Chọn Quận/Huyện"
-                    disabled={isLoading || !formData.province}
-                    error={!!errors.district}
-                  />
-                </fieldset>
-
-                <fieldset className="register-field border-none p-0 m-0 mb-4">
                   <label className="register-label">Phường / Xã *</label>
                   <SearchableDropdown
                     options={wards.map(w => ({ value: w.code, label: w.name }))}
                     value={selectedLocation.wardCode}
                     onChange={handleWardChange}
                     placeholder="Chọn Phường/Xã"
-                    disabled={isLoading || !formData.district}
+                    disabled={isLoading || !formData.province}
                     error={!!errors.ward}
+                  />
+                </fieldset>
+
+                <fieldset className="register-field border-none p-0 m-0 mb-4">
+                  <label className="register-label">Quận / Huyện *</label>
+                  <SearchableDropdown
+                    options={districts.map(d => ({ value: d.code, label: d.name }))}
+                    value={selectedLocation.districtCode}
+                    onChange={handleDistrictChange}
+                    placeholder="Chọn Quận/Huyện"
+                    disabled={isLoading || !formData.ward}
+                    error={!!errors.district}
                   />
                 </fieldset>
                 

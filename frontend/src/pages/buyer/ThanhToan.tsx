@@ -2,32 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Info, Truck } from 'lucide-react';
 import { PATHS } from '../../utils/path.utils';
+import { getProvinces, getProvinceTree, type Province, type District, type Ward } from '../../services/location.service';
+import SearchableDropdown from '../../components/SearchableDropdown';
 
-// --- Mock dữ liệu địa chỉ (cascade) ---
-interface Province { code: string; name: string; }
-interface District { code: string; name: string; provinceCode: string; }
-interface Ward { code: string; name: string; districtCode: string; }
-
-const mockProvinces: Province[] = [
-  { code: '01', name: 'Thành phố Hà Nội' },
-  { code: '02', name: 'Thành phố Hồ Chí Minh' },
-  { code: '03', name: 'Đà Nẵng' },
-];
-const mockDistricts: District[] = [
-  { code: '001', name: 'Quận Ba Đình', provinceCode: '01' },
-  { code: '002', name: 'Quận Hoàn Kiếm', provinceCode: '01' },
-  { code: '003', name: 'Quận 1', provinceCode: '02' },
-  { code: '004', name: 'Quận 2', provinceCode: '02' },
-  { code: '005', name: 'Quận Hải Châu', provinceCode: '03' },
-];
-const mockWards: Ward[] = [
-  { code: '0001', name: 'Phường Phúc Xá', districtCode: '001' },
-  { code: '0002', name: 'Phường Trúc Bạch', districtCode: '001' },
-  { code: '0003', name: 'Phường Hàng Bạc', districtCode: '002' },
-  { code: '0004', name: 'Phường Bến Nghé', districtCode: '003' },
-  { code: '0005', name: 'Phường Thảo Điền', districtCode: '004' },
-  { code: '0006', name: 'Phường Hòa Thuận Tây', districtCode: '005' },
-];
+// Types are imported from location.service
 
 // --- Mock sản phẩm trong giỏ ---
 interface CartItem {
@@ -94,7 +72,6 @@ const Checkout: React.FC = () => {
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
-  const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.donGia * item.soLuong, 0);
@@ -113,9 +90,8 @@ const Checkout: React.FC = () => {
   }, []);
 
   const fetchProvinces = useCallback(async () => {
-    console.log('[API Giả lập] GET /api/provinces');
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setProvinces(mockProvinces);
+    const data = await getProvinces();
+    setProvinces(data as any[]);
   }, []);
 
   useEffect(() => {
@@ -123,41 +99,48 @@ const Checkout: React.FC = () => {
     fetchProvinces();
   }, [fetchCheckoutData, fetchProvinces]);
 
-  useEffect(() => {
-    if (!address.provinceCode) {
-      setDistricts([]);
-      setAddress(prev => ({ ...prev, districtCode: '', wardCode: '' }));
-      return;
-    }
-    const loadDistricts = async () => {
-      setLoadingDistricts(true);
-      console.log(`[API Giả lập] GET /api/districts?provinceId=${address.provinceCode}`);
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const filtered = mockDistricts.filter(d => d.provinceCode === address.provinceCode);
-      setDistricts(filtered);
-      setAddress(prev => ({ ...prev, districtCode: '', wardCode: '' }));
-      setLoadingDistricts(false);
-    };
-    loadDistricts();
-  }, [address.provinceCode]);
+  const [allDistrictsOfProvince, setAllDistrictsOfProvince] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (!address.districtCode) {
-      setWards([]);
-      setAddress(prev => ({ ...prev, wardCode: '' }));
-      return;
-    }
-    const loadWards = async () => {
+  const handleProvinceChange = async (val: string | number) => {
+    const provinceCode = Number(val);
+    setAddress(prev => ({ ...prev, provinceCode: String(provinceCode), districtCode: '', wardCode: '' }));
+    setDistricts([]);
+    setWards([]);
+    setAllDistrictsOfProvince([]);
+    if (provinceCode) {
       setLoadingWards(true);
-      console.log(`[API Giả lập] GET /api/wards?districtId=${address.districtCode}`);
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const filtered = mockWards.filter(w => w.districtCode === address.districtCode);
-      setWards(filtered);
-      setAddress(prev => ({ ...prev, wardCode: '' }));
+      const tree = await getProvinceTree(provinceCode);
+      if (tree) {
+        setAllDistrictsOfProvince(tree.districts || []);
+        const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
+          ...w,
+          district_code: d.code
+        })));
+        setWards(flatWards as any[]);
+      }
       setLoadingWards(false);
-    };
-    loadWards();
-  }, [address.districtCode]);
+    }
+  };
+
+  const handleWardChange = (val: string | number) => {
+    const wardCode = Number(val);
+    const ward = wards.find((w: any) => Number(w.code) === wardCode) as any;
+    setAddress(prev => ({ ...prev, wardCode: String(wardCode), districtCode: '' }));
+    setDistricts([]);
+    if (ward) {
+      const distCode = ward.district_code;
+      const matchingDist = allDistrictsOfProvince.find(d => d.code === distCode);
+      if (matchingDist) {
+        setDistricts([matchingDist]);
+        setAddress(prev => ({ ...prev, districtCode: String(matchingDist.code) }));
+      }
+    }
+  };
+
+  const handleDistrictChange = (val: string | number) => {
+    const districtCode = Number(val);
+    setAddress(prev => ({ ...prev, districtCode: String(districtCode) }));
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -173,9 +156,9 @@ const Checkout: React.FC = () => {
   };
 
   const getFullAddress = () => {
-    const province = provinces.find(p => p.code === address.provinceCode)?.name || '';
-    const district = districts.find(d => d.code === address.districtCode)?.name || '';
-    const ward = wards.find(w => w.code === address.wardCode)?.name || '';
+    const province = provinces.find(p => String(p.code) === address.provinceCode)?.name || '';
+    const district = districts.find(d => String(d.code) === address.districtCode)?.name || '';
+    const ward = wards.find(w => String(w.code) === address.wardCode)?.name || '';
     return `${address.detail}, ${ward}, ${district}, ${province}`;
   };
 
@@ -280,38 +263,38 @@ const Checkout: React.FC = () => {
                   <div className="form-row three-col">
                     <div className="form-group">
                       <label>Tỉnh/Thành *</label>
-                      <select
+                      <SearchableDropdown
+                        theme="admin"
+                        options={provinces.map(p => ({ value: p.code, label: p.name }))}
                         value={address.provinceCode}
-                        onChange={e => setAddress({ ...address, provinceCode: e.target.value })}
-                      >
-                        <option value="">-- Chọn --</option>
-                        {provinces.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
-                      </select>
+                        onChange={handleProvinceChange}
+                        placeholder="Chọn Tỉnh/Thành"
+                      />
                       {errors.province && <span className="error">{errors.province}</span>}
                     </div>
                     <div className="form-group">
-                      <label>Quận/Huyện *</label>
-                      <select
-                        value={address.districtCode}
-                        onChange={e => setAddress({ ...address, districtCode: e.target.value })}
-                        disabled={!address.provinceCode || loadingDistricts}
-                      >
-                        <option value="">-- Chọn --</option>
-                        {districts.map(d => <option key={d.code} value={d.code}>{d.name}</option>)}
-                      </select>
-                      {errors.district && <span className="error">{errors.district}</span>}
+                      <label>Phường/Xã *</label>
+                      <SearchableDropdown
+                        theme="admin"
+                        options={wards.map(w => ({ value: w.code, label: w.name }))}
+                        value={address.wardCode}
+                        onChange={handleWardChange}
+                        placeholder="Chọn Phường/Xã"
+                        disabled={!address.provinceCode || loadingWards}
+                      />
+                      {errors.ward && <span className="error">{errors.ward}</span>}
                     </div>
                     <div className="form-group">
-                      <label>Phường/Xã *</label>
-                      <select
-                        value={address.wardCode}
-                        onChange={e => setAddress({ ...address, wardCode: e.target.value })}
-                        disabled={!address.districtCode || loadingWards}
-                      >
-                        <option value="">-- Chọn --</option>
-                        {wards.map(w => <option key={w.code} value={w.code}>{w.name}</option>)}
-                      </select>
-                      {errors.ward && <span className="error">{errors.ward}</span>}
+                      <label>Quận/Huyện *</label>
+                      <SearchableDropdown
+                        theme="admin"
+                        options={districts.map(d => ({ value: d.code, label: d.name }))}
+                        value={address.districtCode}
+                        onChange={handleDistrictChange}
+                        placeholder="Chọn Quận/Huyện"
+                        disabled={!address.wardCode}
+                      />
+                      {errors.district && <span className="error">{errors.district}</span>}
                     </div>
                   </div>
                   <div className="form-group">

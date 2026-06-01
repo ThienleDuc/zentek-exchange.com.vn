@@ -33,4 +33,12 @@ router.use('/admin/chats', chatAdminRoutes);
 const chatRoutes = require('./chat/chat.routes');
 router.use('/chats', chatRoutes);
 
+// Đăng ký nhánh định tuyến /products (Public API)
+const productRoutes = require('./product/product.routes');
+router.use('/products', productRoutes);
+
+// Đăng ký nhánh định tuyến /stores (Public API)
+const storeRoutes = require('./store/store.routes');
+router.use('/stores', storeRoutes);
+
 module.exports = router;

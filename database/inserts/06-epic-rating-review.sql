@@ -1,6 +1,5 @@
 USE ZenTekExchange;
 GO
-
 -- Epic 6: Rating & Review (Khởi tạo dữ liệu đánh giá, phản hồi của người bán)
 
 -- 1. Thêm Đánh giá sản phẩm

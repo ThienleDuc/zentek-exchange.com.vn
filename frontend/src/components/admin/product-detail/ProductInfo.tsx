@@ -8,9 +8,18 @@ interface ProductInfoProps {
   handleAction?: (actionStatus: string, confirmMessage: string) => void;
   onSelectVariantImage?: (url: string) => void;
   role?: 'admin' | 'seller' | 'buyer';
+  onAddToCart?: () => void;
+  onBuyNow?: () => void;
 }
 
-const ProductInfo: React.FC<ProductInfoProps> = ({ product, handleAction, onSelectVariantImage, role = 'admin' }) => {
+const ProductInfo: React.FC<ProductInfoProps> = ({ 
+  product, 
+  handleAction, 
+  onSelectVariantImage, 
+  role = 'admin',
+  onAddToCart,
+  onBuyNow
+}) => {
   return (
     <div className="bg-surface rounded-xl shadow-sm border border-border-default p-6 flex flex-col h-fit">
       {/* Title & Badge */}
@@ -145,11 +154,17 @@ const ProductInfo: React.FC<ProductInfoProps> = ({ product, handleAction, onSele
 
         {role === 'buyer' && (
           <>
-            <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-secondary/10 text-secondary border border-secondary hover:bg-secondary hover:text-white rounded-lg transition-colors text-sm font-bold">
-              Thêm vào giỏ
+            <button 
+              onClick={onAddToCart}
+              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-secondary/10 text-secondary border border-secondary hover:bg-secondary hover:text-white rounded-lg transition-colors text-sm font-bold"
+            >
+              Thêm giỏ hàng
             </button>
-            <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/30 rounded-lg transition-colors text-sm font-bold">
-              Mua ngay
+            <button 
+              onClick={onBuyNow}
+              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/30 rounded-lg transition-colors text-sm font-bold"
+            >
+              Mua hàng
             </button>
           </>
         )}

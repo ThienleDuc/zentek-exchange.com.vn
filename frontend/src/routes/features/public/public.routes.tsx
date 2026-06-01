@@ -1,6 +1,7 @@
 import Home from '../../../pages/public/Home';
 import Search from '../../../pages/public/Search';
 import Stores from '../../../pages/public/Stores';
+import ProductDetail from '../../../pages/admin/ProductDetail';
 import MainLayout from '../../../layouts/MainLayout';
 import { type CustomRouteObject } from '../../types';
 import { PATHS } from '../../../utils/path.utils';
@@ -38,6 +39,15 @@ export const publicFeatureRoutes: CustomRouteObject[] = [
     element: (
       <MainLayout>
         <Stores />
+      </MainLayout>
+    ),
+    isPublic: true
+  },
+  {
+    path: PATHS.PUPLIC.PRODUCT_DETAIL,
+    element: (
+      <MainLayout>
+        <ProductDetail />
       </MainLayout>
     ),
     isPublic: true

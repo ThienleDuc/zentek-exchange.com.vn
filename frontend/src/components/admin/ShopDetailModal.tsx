@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, XCircle, FileText, Lock, Unlock, Store, MapPin, Phone, User, AlertTriangle } from 'lucide-react';
+import { X, CheckCircle, FileText, Lock, Unlock, Store, Phone, User, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
 import { type Shop } from '../../pages/admin/ShopManagement';
 import { type AlertType } from '../common/Alert';

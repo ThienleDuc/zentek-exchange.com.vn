@@ -41,10 +41,11 @@ const MessageManagement = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
-  // Tự động mở/tham gia cộng đồng khi có query ?community=true
+  // Tự động mở/tham gia cộng đồng khi có query ?community=true hoặc mở chat cửa hàng bằng ?store=TenCuaHang
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const openCommunity = queryParams.get('community') === 'true';
+    const storeName = queryParams.get('store');
     
     if (openCommunity) {
       const handleAutoJoinAndOpen = async () => {
@@ -80,6 +81,20 @@ const MessageManagement = () => {
       };
       
       handleAutoJoinAndOpen();
+    } else if (storeName) {
+      const handleOpenStoreChat = async () => {
+        const currentConversations = await fetchConversations();
+        // Tìm cuộc trò chuyện với cửa hàng có tên khớp hoặc chứa storeName
+        const storeChat = currentConversations.find(c => 
+          c.name?.toLowerCase().includes(storeName.toLowerCase())
+        );
+        if (storeChat) {
+          setActiveChatId(storeChat.id);
+        } else {
+          console.log(`Không tìm thấy cuộc trò chuyện với cửa hàng: ${storeName}`);
+        }
+      };
+      handleOpenStoreChat();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);

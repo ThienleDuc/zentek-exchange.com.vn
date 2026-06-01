@@ -30,7 +30,6 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [roles, setRoles] = useState<Role[]>([]);
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -77,14 +76,12 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
       const response = await api.get('/users/roles');
       if (response.data.success) {
         if (isEditMode) {
-          setRoles(response.data.data);
           // If editing and roleId not set in formData yet (just in case)
           if (user && !user.VaiTroId && response.data.data.length > 0) {
              setFormData(prev => ({ ...prev, roleId: response.data.data[0].MaVaiTro }));
           }
         } else {
           const filteredRoles = response.data.data.filter((r: Role) => r.TenVaiTro === 'Buyer' || r.TenVaiTro === 'Người mua');
-          setRoles(filteredRoles);
           if (filteredRoles.length > 0) {
             setFormData(prev => ({ ...prev, roleId: filteredRoles[0].MaVaiTro }));
           }
