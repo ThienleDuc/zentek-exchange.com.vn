@@ -1,0 +1,509 @@
+/* frontend/src/styles/pages/stores.css */
+
+.page-stores {
+  background-color: var(--background);
+  min-height: 100vh;
+
+  .stores-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 2rem 1.5rem;
+    display: flex;
+    gap: 2rem;
+  }
+
+  /* Sidebar bộ lọc */
+  .stores-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background-color: var(--surface);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    padding: 1.25rem;
+    position: sticky;
+    top: 1rem;
+    height: fit-content;
+  }
+
+  .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-header h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0;
+  }
+
+  .reset-btn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  .reset-btn:hover {
+    text-decoration: underline;
+  }
+
+  .filter-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .filter-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-body);
+    margin-bottom: 0.5rem;
+  }
+
+  .filter-group select,
+  .filter-group input[type="text"] {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-dark);
+    background-color: var(--surface);
+    color: var(--text-main);
+    font-size: 0.85rem;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-body);
+    cursor: pointer;
+  }
+
+  .rating-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .rating-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  /* Mobile filter */
+  .mobile-filter-toggle {
+    display: none;
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 40;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 9999px;
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-lg);
+    cursor: pointer;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .mobile-filter-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .mobile-filter-drawer {
+    width: 85%;
+    max-width: 320px;
+    background-color: var(--surface);
+    height: 100%;
+    overflow-y: auto;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-xl);
+    position: relative;
+  }
+
+  .close-drawer {
+    margin-top: 1rem;
+    width: 100%;
+    padding: 0.75rem;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Vùng kết quả */
+  .stores-results {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .result-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .search-box input {
+    width: 260px;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-dark);
+    background-color: var(--surface);
+    color: var(--text-main);
+    font-size: 0.85rem;
+  }
+
+  .result-count {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  .sort-options {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sort-options label {
+    font-size: 0.85rem;
+    color: var(--text-body);
+  }
+
+  .sort-options select {
+    padding: 0.4rem 1.5rem 0.4rem 0.75rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-dark);
+    background-color: var(--surface);
+    color: var(--text-main);
+    font-size: 0.85rem;
+  }
+
+  /* Grid cửa hàng - mặc định 1 cột (mobile) */
+  .stores-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 1fr;
+  }
+
+  /* Từ 640px: 2 cột (tablet nhỏ) */
+  @media (min-width: 640px) {
+    .stores-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Từ 768px: vẫn 2 cột (tablet) */
+  @media (min-width: 768px) {
+    .stores-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Từ 1024px trở lên: 3 cột mỗi hàng (desktop) */
+  @media (min-width: 1024px) {
+    .stores-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  /* Card cửa hàng */
+  .store-card {
+    background-color: var(--surface);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    transition: all var(--transition-normal);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .store-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border-dark);
+  }
+
+  .store-logo {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--surface-muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .store-logo img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: var(--radius-full);
+  }
+
+  .logo-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-full);
+    background-color: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+  }
+
+  .store-info {
+    padding: 1rem;
+  }
+
+  .store-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  .verified-badge {
+    color: var(--secondary);
+  }
+
+  .store-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .stars-container {
+    display: flex;
+    gap: 0.1rem;
+  }
+
+  .star {
+    color: #fbbf24;
+  }
+
+  .star.filled {
+    fill: #fbbf24;
+  }
+
+  .star.empty {
+    color: #e5e7eb;
+  }
+
+  .rating-score {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-main);
+  }
+
+  .review-count {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  .store-stats {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .store-address {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .view-shop-btn {
+    width: 100%;
+    padding: 0.5rem;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-weight: 500;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+  }
+
+  .view-shop-btn:hover {
+    background-color: var(--primary-hover);
+  }
+
+  /* Skeleton card - cấu trúc giống hệt store-card */
+  .skeleton-store-card {
+    cursor: default;
+  }
+
+  .skeleton-store-card .store-logo {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite;
+  }
+
+  .skeleton-store-card .store-info {
+    padding: 1rem;
+  }
+
+  .skeleton-store-card .skeleton-text {
+    height: 0.9rem;
+    background-color: var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.75rem;
+  }
+
+  .skeleton-store-card .store-name-skeleton {
+    width: 70%;
+    height: 1.2rem;
+  }
+
+  .skeleton-store-card .store-rating-skeleton {
+    width: 50%;
+  }
+
+  .skeleton-store-card .store-stats-skeleton {
+    width: 80%;
+  }
+
+  .skeleton-store-card .store-address-skeleton {
+    width: 90%;
+    margin-bottom: 0;
+  }
+
+  /* Đảm bảo shimmer animation tồn tại */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* Pagination */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .pagination-btn {
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--text-body);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+  }
+
+  .pagination-btn.active {
+    background-color: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  .pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .pagination-btn:hover:not(:disabled):not(.active) {
+    background-color: var(--surface-muted);
+    border-color: var(--border-dark);
+  }
+
+  /* No results */
+  .no-results {
+    text-align: center;
+    padding: 3rem;
+    background-color: var(--surface);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+  }
+
+  .no-results p {
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+  }
+
+  .no-results button {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .stores-container {
+      flex-direction: column;
+      padding: 1rem;
+    }
+    .stores-sidebar {
+      display: none;
+    }
+    .mobile-filter-toggle {
+      display: flex;
+    }
+    .result-toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .search-box input {
+      width: 100%;
+    }
+    .sort-options {
+      justify-content: space-between;
+    }
+  }
+}

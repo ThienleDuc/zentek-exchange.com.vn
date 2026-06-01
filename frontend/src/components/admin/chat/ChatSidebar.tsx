@@ -1,7 +1,8 @@
-import { Search, Users, User, Store, MessageCircle, MoreHorizontal, CheckSquare, Settings, Link2 } from 'lucide-react';
+import { Search, Users, User, Store, MessageCircle, MoreHorizontal, CheckSquare, Settings, Link2, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { type Conversation } from '../../../services/chatAdmin.service';
 import { chatService } from '../../../services/chat.service';
-import { getUserFromStorage, isBuyer, isSeller } from '../../../utils/role.utils';
+import { getUserFromStorage, isBuyer, isSeller, isAdmin } from '../../../utils/role.utils';
 import dayjs from 'dayjs';
 import { useState, useRef, useEffect } from 'react';
 
@@ -38,11 +39,20 @@ const ChatSidebar = ({
   const currentUser = getUserFromStorage();
   
   // Kiểm tra xem đã có conversation nào là nhóm cộng đồng tương ứng chưa
-  const hasBuyerGroup = conversations.some(c => c.name === 'Cộng đồng người mua');
-  const hasSellerGroup = conversations.some(c => c.name === 'Cộng đồng người bán');
+  const hasBuyerGroup = conversations.some(c => c.name?.toLowerCase().includes('cộng đồng người mua'));
+  const hasSellerGroup = conversations.some(c => c.name?.toLowerCase().includes('cộng đồng người bán'));
 
-  const showBuyerCommunity = isBuyer(currentUser) && !hasBuyerGroup && !localJoined;
-  const showSellerCommunity = isSeller(currentUser) && !hasSellerGroup && !localJoined;
+  const showBuyerCommunity = isBuyer(currentUser) && 
+                            (filter === 'all' || filter === 'group') && 
+                            !searchQuery && 
+                            !hasBuyerGroup && 
+                            !localJoined;
+                            
+  const showSellerCommunity = isSeller(currentUser) && 
+                             (filter === 'all' || filter === 'group') && 
+                             !searchQuery && 
+                             !hasSellerGroup && 
+                             !localJoined;
 
   const handleJoinCommunity = async () => {
     try {
@@ -70,9 +80,9 @@ const ChatSidebar = ({
   
   const filters: { value: FilterType; label: string }[] = [
     { value: 'all', label: 'Tất cả' },
-    { value: 'individual', label: 'Cá nhân' },
+    { value: 'individual' as const, label: 'Cá nhân' },
     { value: 'group', label: 'Nhóm' },
-    { value: 'store', label: 'Cửa hàng' },
+    ...((isAdmin(currentUser) || isBuyer(currentUser)) ? [{ value: 'store' as const, label: 'Cửa hàng' }] : []),
   ];
 
   const getIcon = (type: string) => {
@@ -97,28 +107,40 @@ const ChatSidebar = ({
           <h2 className="text-xl font-bold text-text-main flex items-center gap-2">
             <MessageCircle className="text-primary" /> Tin nhắn
           </h2>
-          <div className="relative" ref={menuRef}>
-            <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-text-muted hover:text-text-main hover:bg-surface-hover rounded-lg transition-colors"
-              title="Tùy chọn"
-            >
-              <MoreHorizontal size={18} />
-            </button>
+          <div className="flex items-center gap-1">
+            {isBuyer(currentUser) && (
+              <Link 
+                to="/buyer/dashboard" 
+                className="p-2 text-text-muted hover:text-primary hover:bg-surface-hover rounded-lg transition-colors"
+                title="Quay lại trang cá nhân"
+              >
+                <ArrowLeft size={18} />
+              </Link>
+            )}
+            <div className="relative" ref={menuRef}>
+              <button 
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2 text-text-muted hover:text-text-main hover:bg-surface-hover rounded-lg transition-colors"
+                title="Tùy chọn"
+              >
+                <MoreHorizontal size={18} />
+              </button>
             
             {/* Dropdown Menu */}
             {isMenuOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-surface border border-border-default rounded-xl shadow-lg py-2 z-10 transition-all origin-top-right">
-                <button 
-                  onClick={() => {
-                    onOpenCreateGroup();
-                    setIsMenuOpen(false);
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-surface-hover flex items-center gap-3 text-sm text-text-main transition-colors"
-                >
-                  <Users size={16} className="text-primary" />
-                  <span>Tạo nhóm trò chuyện</span>
-                </button>
+                {(isAdmin(currentUser) || isSeller(currentUser)) && (
+                  <button 
+                    onClick={() => {
+                      onOpenCreateGroup();
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-surface-hover flex items-center gap-3 text-sm text-text-main transition-colors"
+                  >
+                    <Users size={16} className="text-primary" />
+                    <span>Tạo nhóm trò chuyện</span>
+                  </button>
+                )}
                 <button 
                   onClick={() => {
                     onOpenJoinGroup();
@@ -140,6 +162,7 @@ const ChatSidebar = ({
                 </button>
               </div>
             )}
+          </div>
           </div>
         </div>
         <div className="relative">

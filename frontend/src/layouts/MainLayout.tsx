@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Header from '../components/common/Header';
 import Footer from '../components/common/Footer';
 
@@ -8,16 +8,30 @@ interface MainLayoutProps {
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  const location = useLocation();
+  const isChatPage = location.pathname.includes('/buyer/tin-nhan');
+
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className={isChatPage ? "flex flex-col h-screen overflow-hidden bg-gray-50" : "flex flex-col min-h-screen bg-gray-50"}>
       <Header />
       
-      {/* Vùng nội dung chính, cách 2 bên tương tự Header/Footer (max-w-[1200px]) */}
-      <main className="flex-1 w-full max-w-[1200px] mx-auto px-4 py-8">
-        {children || <Outlet />}
+      <main 
+        className={
+          isChatPage 
+            ? "flex-grow min-h-0 w-full max-w-[1200px] mx-auto px-4 py-4 md:py-6 overflow-hidden" 
+            : "main-layout-content"
+        }
+      >
+        {isChatPage ? (
+          <div className="h-full w-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {children || <Outlet />}
+          </div>
+        ) : (
+          children || <Outlet />
+        )}
       </main>
 
-      <Footer variant="default" />
+      {!isChatPage && <Footer variant="default" />}
     </div>
   );
 };

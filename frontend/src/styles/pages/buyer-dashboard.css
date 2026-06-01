@@ -1,0 +1,281 @@
+/* ============================================
+   Page: Tài khoản của tôi (BuyerDashboard)
+   Session: Dùng chung cho mọi phiên làm việc
+   ============================================ */
+
+.buyer-dashboard {
+  background-color: var(--background);
+  min-height: 100vh;
+}
+
+.buyer-dashboard__container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.buyer-dashboard__title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 1.5rem;
+}
+
+/* Layout 2 cột */
+.buyer-dashboard__content {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+/* Sidebar (cột trái) */
+.buyer-dashboard__sidebar {
+  flex: 1;
+  min-width: 240px;
+  background-color: var(--surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  height: fit-content;
+}
+
+/* Avatar wrapper */
+.buyer-dashboard__avatar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Ảnh đại diện - QUAN TRỌNG: không bị méo */
+.buyer-dashboard__avatar {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  flex-shrink: 0;
+  background-color: var(--surface-muted);
+  border: 3px solid var(--primary);
+}
+
+/* Placeholder khi chưa có ảnh */
+.buyer-dashboard__avatar-placeholder {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background-color: var(--surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  border: 2px dashed var(--border-dark);
+  flex-shrink: 0;
+}
+
+/* Nút đổi ảnh */
+.buyer-dashboard__change-avatar-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.buyer-dashboard__change-avatar-btn:hover {
+  color: var(--primary-hover);
+}
+
+/* Action buttons */
+.buyer-dashboard__action-buttons {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.buyer-dashboard__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border-radius: var(--radius-lg);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+}
+
+.buyer-dashboard__action-btn--edit {
+  background-color: var(--primary);
+  color: white;
+}
+
+.buyer-dashboard__action-btn--edit:hover {
+  background-color: var(--primary-hover);
+}
+
+.buyer-dashboard__action-btn--password {
+  background-color: var(--surface-muted);
+  color: var(--text-body);
+  border: 1px solid var(--border);
+}
+
+.buyer-dashboard__action-btn--password:hover {
+  background-color: var(--border);
+}
+
+/* Cột phải - Main */
+.buyer-dashboard__main {
+  flex: 2;
+  background-color: var(--surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+}
+
+.buyer-dashboard__info-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.buyer-dashboard__info-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.buyer-dashboard__info-row:last-child {
+  border-bottom: none;
+}
+
+.buyer-dashboard__info-label {
+  width: 140px;
+  font-weight: 600;
+  color: var(--text-body);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.buyer-dashboard__info-value {
+  flex: 1;
+  color: var(--text-main);
+  word-break: break-word;
+}
+
+/* Skeleton loading */
+.buyer-dashboard__avatar-skeleton {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+.buyer-dashboard__skeleton-btn {
+  height: 42px;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+  border-radius: var(--radius-lg);
+}
+
+.buyer-dashboard__info-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.buyer-dashboard__skeleton-line {
+  height: 2rem;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+  border-radius: var(--radius-sm);
+}
+
+.buyer-dashboard__skeleton-line--short {
+  width: 60%;
+  height: 2rem;
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* Error state */
+.buyer-dashboard__error {
+  text-align: center;
+  padding: 3rem;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+}
+
+.buyer-dashboard__retry-btn {
+  margin-top: 1rem;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .buyer-dashboard__container {
+    padding: 1rem;
+  }
+
+  .buyer-dashboard__content {
+    flex-direction: column;
+  }
+
+  .buyer-dashboard__sidebar {
+    width: 100%;
+  }
+
+  .buyer-dashboard__info-row {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .buyer-dashboard__info-label {
+    width: auto;
+  }
+
+  .buyer-dashboard__avatar,
+  .buyer-dashboard__avatar-placeholder,
+  .buyer-dashboard__avatar-skeleton {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* Keyframes cho skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

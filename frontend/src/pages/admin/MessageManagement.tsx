@@ -1,13 +1,20 @@
 // import removed
 
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import ChatSidebar from '../../components/admin/chat/ChatSidebar';
 import ChatBox from '../../components/admin/chat/ChatBox';
 import CreateGroupModal from '../../components/admin/chat/CreateGroupModal';
 import JoinGroupModal from '../../components/admin/chat/JoinGroupModal';
 import { chatAdminService, type Conversation, type ChatMessage } from '../../services/chatAdmin.service';
+import { chatService } from '../../services/chat.service';
+import { getUserFromStorage, isBuyer } from '../../utils/role.utils';
 
 const MessageManagement = () => {
+  const location = useLocation();
+  const isFullScreen = location.pathname.includes('/admin/messages') || location.pathname.includes('/seller/chat');
+  const heightClass = isFullScreen ? 'h-screen' : 'h-full';
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -22,8 +29,10 @@ const MessageManagement = () => {
     try {
       const data = await chatAdminService.getConversations(filter);
       setConversations(data);
+      return data;
     } catch (error) {
       console.error('Lỗi khi tải danh sách trò chuyện:', error);
+      return [];
     }
   };
 
@@ -31,6 +40,49 @@ const MessageManagement = () => {
     fetchConversations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
+
+  // Tự động mở/tham gia cộng đồng khi có query ?community=true
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const openCommunity = queryParams.get('community') === 'true';
+    
+    if (openCommunity) {
+      const handleAutoJoinAndOpen = async () => {
+        const currentConversations = await fetchConversations();
+        
+        // Tìm cuộc trò chuyện cộng đồng người mua
+        const buyerGroup = currentConversations.find(c => 
+          c.name?.toLowerCase().includes('cộng đồng người mua')
+        );
+
+        if (buyerGroup) {
+          setActiveChatId(buyerGroup.id);
+        } else {
+          // Chưa tham gia, tự động tham gia nếu là Buyer
+          const user = getUserFromStorage();
+          if (isBuyer(user)) {
+            try {
+              const res = await chatService.joinCommunity();
+              if (res.success) {
+                const updatedConversations = await fetchConversations();
+                const newBuyerGroup = updatedConversations.find(c => 
+                  c.name?.toLowerCase().includes('cộng đồng người mua')
+                );
+                if (newBuyerGroup) {
+                  setActiveChatId(newBuyerGroup.id);
+                }
+              }
+            } catch (err) {
+              console.error('Lỗi khi tự động tham gia cộng đồng:', err);
+            }
+          }
+        }
+      };
+      
+      handleAutoJoinAndOpen();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   // Lấy tin nhắn khi chọn chat
   useEffect(() => {
@@ -104,7 +156,7 @@ const MessageManagement = () => {
   const activeConversation = conversations.find(c => c.id === activeChatId) || null;
 
   return (
-    <div className="h-screen flex overflow-hidden">
+    <div className={`${heightClass} w-full flex overflow-hidden`}>
       <ChatSidebar 
         conversations={filteredConversations}
         activeChatId={activeChatId}

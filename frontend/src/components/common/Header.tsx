@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { PATHS } from '../../utils/path.utils';
 import { storage } from '../../utils/storage.utils';
 import { isBuyer, isSeller, type User } from '../../utils/role.utils';
@@ -8,9 +8,34 @@ import CategoryNav from './CategoryNav';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(storage.getUser());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Đóng dropdown khi chuyển trang
+  useEffect(() => {
+    setIsDropdownOpen(false);
+  }, [location.pathname]);
+
+  // Đồng bộ ô tìm kiếm với query URL
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const query = searchParams.get('q') || '';
+    if (location.pathname === PATHS.PUPLIC.SEARCH) {
+      setSearchQuery(query);
+    } else {
+      setSearchQuery('');
+    }
+  }, [location.pathname, location.search]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`${PATHS.PUPLIC.SEARCH}?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   const containerClass = "max-w-[1200px] mx-auto px-4";
 
@@ -58,23 +83,25 @@ const Header: React.FC = () => {
 
           {/* Thanh tìm kiếm */}
           <div className="flex-1 max-w-2xl mx-8 hidden md:block">
-            <div className="flex relative">
+            <form onSubmit={handleSearchSubmit} className="flex items-stretch border-2 border-primary rounded-lg overflow-hidden bg-white">
               <input 
                 type="text" 
                 placeholder="Tìm kiếm sản phẩm, thương hiệu..." 
-                className="w-full px-4 py-2.5 border border-primary rounded-l-md focus:outline-none focus:ring-1 focus:ring-primary"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 px-4 py-2 bg-transparent text-gray-700 placeholder-gray-400 focus:outline-none border-none min-w-0"
               />
-              <button className="bg-primary px-6 py-2.5 rounded-r-md text-white hover:bg-primary-hover transition-colors flex items-center justify-center">
+              <button type="submit" className="bg-primary px-6 text-white hover:bg-primary-hover transition-colors flex items-center justify-center border-none cursor-pointer !rounded-none">
                 <Search size={20} />
               </button>
-            </div>
+            </form>
           </div>
 
           {/* Navigation & Auth */}
           <div className="flex items-center gap-6">
             {/* Giỏ hàng (chỉ hiện khi KHÔNG phải seller) */}
             {(!user || !isSeller(user)) && (
-              <Link to="/cart" className="relative text-gray-600 hover:text-primary transition-colors mr-2">
+              <Link to={PATHS.Buyer.CART} className="relative text-gray-600 hover:text-primary transition-colors mr-2">
                 <ShoppingCart size={26} />
                 <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
                   0
@@ -126,9 +153,9 @@ const Header: React.FC = () => {
                     <Link
                       to={isBuyer(user) ? PATHS.Buyer.DASHBOARD : (isSeller(user) ? PATHS.Seller.DASHBOARD : PATHS.AUTH.PROFILE)}
                       className="flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-gray-50 text-gray-700"
-                      onClick={() => setIsDropdownOpen(false)}
+                      onClick={() => setTimeout(() => setIsDropdownOpen(false), 0)}
                     >
-                      <UserIcon size={16} className="text-gray-400" />
+                      <UserIcon size={16} className="text-gray-400 pointer-events-none" />
                       Trang cá nhân
                     </Link>
 
@@ -136,9 +163,9 @@ const Header: React.FC = () => {
                       <Link
                         to={PATHS.Buyer.ORDERS}
                         className="flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-gray-50 text-gray-700"
-                        onClick={() => setIsDropdownOpen(false)}
+                        onClick={() => setTimeout(() => setIsDropdownOpen(false), 0)}
                       >
-                        <ShoppingBag size={16} className="text-gray-400" />
+                        <ShoppingBag size={16} className="text-gray-400 pointer-events-none" />
                         Đơn mua
                       </Link>
                     )}
@@ -147,19 +174,22 @@ const Header: React.FC = () => {
                       <Link
                         to={PATHS.Seller.SHOP}
                         className="flex items-center gap-2 px-4 py-2 text-sm transition-colors hover:bg-gray-50 text-gray-700"
-                        onClick={() => setIsDropdownOpen(false)}
+                        onClick={() => setTimeout(() => setIsDropdownOpen(false), 0)}
                       >
-                        <Store size={16} className="text-gray-400" />
+                        <Store size={16} className="text-gray-400 pointer-events-none" />
                         Cửa hàng của tôi
                       </Link>
                     )}
 
                     <div className="border-t mt-1 border-gray-100">
                       <button
-                        onClick={handleLogout}
+                        onClick={() => {
+                          setTimeout(() => setIsDropdownOpen(false), 0);
+                          handleLogout();
+                        }}
                         className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm transition-colors text-red-600 hover:bg-red-50"
                       >
-                        <LogOut size={16} className="text-red-500" />
+                        <LogOut size={16} className="text-red-500 pointer-events-none" />
                         Đăng xuất
                       </button>
                     </div>

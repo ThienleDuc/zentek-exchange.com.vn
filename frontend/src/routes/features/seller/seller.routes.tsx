@@ -1,5 +1,7 @@
 import SellerDashboard from '../../../pages/seller/SellerDashboard';
+import SellerProfile from '../../../pages/seller/SellerProfile';
 import SellerLayout from '../../../layouts/SellerLayout';
+import MessageManagement from '../../../pages/admin/MessageManagement';
 import { PATHS } from '../../../utils/path.utils';
 import { ROLE_NAMES } from '../../../utils/role.utils';
 import { type CustomRouteObject } from '../../types';
@@ -21,15 +23,11 @@ export const sellerRoutes: CustomRouteObject[] = [
       },
       {
         path: 'cua-hang',
-        element: <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">Cài đặt Cửa hàng đang phát triển...</div>
+        element: <SellerProfile />
       },
       {
-        path: 'orders',
-        element: <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">Tính năng Quản lý Đơn Hàng đang phát triển...</div>
-      },
-      {
-        path: 'products',
-        element: <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">Tính năng Quản lý Sản Phẩm đang phát triển...</div>
+        path: 'chat',
+        element: <MessageManagement />
       }
     ]
   }

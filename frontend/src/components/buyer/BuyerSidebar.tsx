@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { User, ClipboardList, Bell, MessageCircle, Settings, Edit3 } from 'lucide-react';
+import { NavLink, Link } from 'react-router-dom';
+import { User, ClipboardList, Bell, MessageCircle, Edit3 } from 'lucide-react';
 import { getUserFromStorage, type User as UserType } from '../../utils/role.utils';
 import { PATHS } from '../../utils/path.utils';
 
@@ -28,9 +28,9 @@ const BuyerSidebar: React.FC = () => {
           <span className="font-semibold text-gray-800 truncate w-32" title={user?.fullName || user?.username}>
             {user?.fullName || user?.username || 'Khách hàng'}
           </span>
-          <button className="text-sm text-gray-500 hover:text-primary flex items-center gap-1 mt-0.5">
+          <Link to={PATHS.Buyer.TAI_KHOAN_CA_NHAN} className="text-sm text-gray-500 hover:text-primary flex items-center gap-1 mt-0.5">
             <Edit3 size={12} /> Sửa hồ sơ
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -46,7 +46,7 @@ const BuyerSidebar: React.FC = () => {
           }
         >
           <User size={18} className="text-blue-500" />
-          Tài khoản của tôi
+          Tài khoản cá nhân
         </NavLink>
         
         <NavLink 

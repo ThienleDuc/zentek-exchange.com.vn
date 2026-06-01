@@ -8,6 +8,18 @@
 @import './pages/auth/register.css';
 @import './pages/admin/ProductManagement.css';
 @import './pages/admin/ProductDetail.css';
+@import './pages/home.css';
+@import './pages/search.css';
+@import './pages/stores.css';
+@import './pages/buyer-dashboard.css';
+@import './pages/edit-profile.css';
+@import './pages/doimatkhau.css';
+@import './pages/donmua.css';
+@import './pages/hoadonbanhang.css';
+@import './pages/cart.css';
+@import './pages/checkout.css';
+@import './pages/seller-dashboard.css';
+@import './pages/seller-profile.css';
 
 /* -- COMPONENTS -- */
 @import './components/searchable-dropdown.css';
@@ -19,4 +31,5 @@
 /* -- LAYOUTS -- */
 @import './layouts/AdminLayout.css';
 @import './layouts/SellerLayout.css';
+@import './layouts/MainLayout.css';
 @import './components/category-nav.css';

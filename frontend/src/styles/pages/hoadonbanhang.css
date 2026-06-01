@@ -1,0 +1,253 @@
+/* HoaDonBanHang.css - Phong cách hóa đơn giấy liền thân */
+
+.invoice-page {
+  background-color: #e9ecef;
+  min-height: 100vh;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: 'Courier New', 'Times New Roman', monospace;
+
+  /* Các nút hành động phía trên */
+  .invoice-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 2rem;
+  }
+
+  .invoice-btn {
+    padding: 0.5rem 1.2rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    font-family: inherit;
+  }
+
+  .invoice-btn-primary {
+    background-color: #2c3e50;
+    color: white;
+  }
+  .invoice-btn-primary:hover {
+    background-color: #1a252f;
+  }
+
+  .invoice-btn-outline {
+    background-color: white;
+    border-color: #adb5bd;
+    color: #2c3e50;
+  }
+  .invoice-btn-outline:hover {
+    background-color: #f1f3f5;
+  }
+
+  /* Khung hóa đơn giấy */
+  .invoice-paper {
+    max-width: 800px;
+    width: 100%;
+    background: white;
+    padding: 2rem 2rem 1.5rem;
+    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.02);
+    border-radius: 4px;
+    font-family: 'Courier New', 'Times New Roman', monospace;
+    color: #212529;
+  }
+
+  /* Header hóa đơn */
+  .invoice-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  .invoice-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+  }
+  .invoice-subtitle {
+    font-size: 0.8rem;
+    color: #6c757d;
+  }
+  .invoice-divider {
+    height: 2px;
+    background: #dee2e6;
+    margin: 1rem 0;
+  }
+  .invoice-divider-light {
+    height: 1px;
+    background: #f1f3f5;
+    margin: 0.75rem 0;
+  }
+
+  /* Thông tin đơn hàng dạng dòng */
+  .invoice-info {
+    margin-bottom: 1.5rem;
+  }
+  .invoice-row {
+    display: flex;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+  }
+  .invoice-label {
+    width: 110px;
+    font-weight: 600;
+    color: #495057;
+  }
+  .invoice-value {
+    flex: 1;
+    color: #212529;
+  }
+  .invoice-status {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .status-Chờ-xử-lý { background: #fff3cd; color: #856404; }
+  .status-Đang-giao { background: #cfe2ff; color: #084298; }
+  .status-Đã-nhận { background: #d1e7dd; color: #0f5132; }
+  .status-Đã-hủy { background: #f8d7da; color: #842029; }
+  .cancel-reason .invoice-value {
+    color: #dc3545;
+  }
+
+  /* Bảng sản phẩm */
+  .invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin: 1rem 0;
+  }
+  .invoice-table th,
+  .invoice-table td {
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.6rem 0.3rem;
+    vertical-align: top;
+  }
+  .invoice-table th {
+    text-align: left;
+    background-color: #f8f9fa;
+    font-weight: 700;
+  }
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+  .invoice-product-name {
+    font-weight: 500;
+  }
+
+  /* Tổng tiền */
+  .invoice-total {
+    text-align: right;
+    margin-top: 1rem;
+    padding-top: 0.5rem;
+    border-top: 2px solid #dee2e6;
+  }
+  .invoice-total-row {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+  .invoice-total-amount {
+    margin-left: 1.5rem;
+    font-size: 1.2rem;
+    color: #2c3e50;
+  }
+
+  /* Footer */
+  .invoice-footer {
+    margin-top: 2rem;
+    text-align: center;
+  }
+  .invoice-thanks {
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-style: italic;
+  }
+
+  /* Modal đánh giá (giữ nguyên style cũ, có thể điều chỉnh) */
+  .invoice-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .invoice-modal {
+    background: white;
+    max-width: 550px;
+    width: 90%;
+    border-radius: 12px;
+    padding: 1.5rem;
+    font-family: system-ui, sans-serif;
+  }
+  .invoice-modal h3 {
+    margin-top: 0;
+  }
+  .review-product {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+  }
+  .review-product img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  .review-stars button {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #f4b942;
+  }
+  .invoice-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  /* Loading & error */
+  .invoice-loading,
+  .invoice-error {
+    text-align: center;
+    padding: 3rem;
+    font-size: 1.2rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .invoice-paper {
+      padding: 1rem;
+    }
+    .invoice-table th,
+    .invoice-table td {
+      font-size: 0.7rem;
+      padding: 0.4rem 0.2rem;
+    }
+    .invoice-label {
+      width: 90px;
+    }
+    .invoice-actions {
+      gap: 0.5rem;
+    }
+    .invoice-btn {
+      padding: 0.3rem 0.8rem;
+      font-size: 0.75rem;
+    }
+  }
+}

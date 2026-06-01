@@ -3,53 +3,154 @@ const { sql, poolPromise } = require('../config/db');
 class ChatAdminService {
   async getConversations(adminId, filter = 'all') {
     const pool = await poolPromise;
-    let query = `
-      SELECT 
-        c.MaCuocTroChuyen, 
-        c.TenCuocTroChuyen, 
-        c.Loai, 
-        c.NgayCapNhat,
-        -- Lấy tin nhắn cuối cùng
-        (SELECT TOP 1 NoiDung FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessage,
-        (SELECT TOP 1 NgayGui FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessageTime,
-        -- Lấy người dùng kia nếu là chat 1-1 (để lấy avatar/tên)
-        (
-          SELECT TOP 1 n.HoTen 
-          FROM ThanhVienCuocTroChuyen tv 
-          JOIN NguoiDung n ON tv.NguoiDungId = n.MaNguoiDung 
-          WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen AND tv.NguoiDungId != @adminId
-        ) AS OtherUserName,
-        (
-          SELECT TOP 1 v.TenVaiTro
-          FROM ThanhVienCuocTroChuyen tv 
-          JOIN NguoiDung n ON tv.NguoiDungId = n.MaNguoiDung 
-          JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
-          WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen AND tv.NguoiDungId != @adminId
-        ) AS OtherUserRole
-      FROM CuocTroChuyen c
-      JOIN ThanhVienCuocTroChuyen my_tv ON c.MaCuocTroChuyen = my_tv.CuocTroChuyenId
-      WHERE my_tv.NguoiDungId = @adminId
-    `;
-
-    // Filter logic
-    if (filter === 'group') {
-      query += ` AND c.Loai = 'nhom'`;
-    } else if (filter === 'individual') {
-      query += ` AND c.Loai = 'ca_nhan' AND EXISTS (
-        SELECT 1 FROM ThanhVienCuocTroChuyen tv2 
-        JOIN NguoiDung n2 ON tv2.NguoiDungId = n2.MaNguoiDung
-        JOIN VaiTro v2 ON n2.VaiTroId = v2.MaVaiTro
-        WHERE tv2.CuocTroChuyenId = c.MaCuocTroChuyen AND tv2.NguoiDungId != @adminId AND v2.TenVaiTro = 'Buyer'
-      )`;
-    } else if (filter === 'store') {
-      query += ` AND c.Loai = 'ca_nhan' AND EXISTS (
-        SELECT 1 FROM ThanhVienCuocTroChuyen tv2 
-        JOIN NguoiDung n2 ON tv2.NguoiDungId = n2.MaNguoiDung
-        JOIN VaiTro v2 ON n2.VaiTroId = v2.MaVaiTro
-        WHERE tv2.CuocTroChuyenId = c.MaCuocTroChuyen AND tv2.NguoiDungId != @adminId AND v2.TenVaiTro = 'Seller'
-      )`;
+    
+    // 1. Lấy vai trò của người dùng hiện tại
+    const roleResult = await pool.request()
+      .input('userId', sql.UniqueIdentifier, adminId)
+      .query(`
+        SELECT v.TenVaiTro 
+        FROM NguoiDung n
+        JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
+        WHERE n.MaNguoiDung = @userId
+      `);
+      
+    const userRole = roleResult.recordset[0]?.TenVaiTro;
+    const isAdminUser = userRole === 'Admin' || userRole === 'Moderator';
+    
+    let query = '';
+    
+    if (isAdminUser) {
+      // TRƯỜNG HỢP ADMIN/MODERATOR: Lấy tất cả cuộc trò chuyện trong hệ thống
+      query = `
+        SELECT 
+          c.MaCuocTroChuyen, 
+          c.TenCuocTroChuyen, 
+          c.Loai, 
+          c.NgayCapNhat,
+          (SELECT TOP 1 NoiDung FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessage,
+          (SELECT TOP 1 NgayGui FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessageTime,
+          -- Tên Buyer nếu có
+          (
+            SELECT TOP 1 n.HoTen 
+            FROM ThanhVienCuocTroChuyen tv 
+            JOIN NguoiDung n ON tv.NguoiDungId = n.MaNguoiDung 
+            JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
+            WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen AND v.TenVaiTro = 'Buyer'
+          ) AS BuyerName,
+          -- Avatar Buyer nếu có
+          (
+            SELECT TOP 1 n.AnhDaiDien 
+            FROM ThanhVienCuocTroChuyen tv 
+            JOIN NguoiDung n ON tv.NguoiDungId = n.MaNguoiDung 
+            JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
+            WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen AND v.TenVaiTro = 'Buyer'
+          ) AS BuyerAvatar,
+          -- Tên Cửa hàng nếu có
+          (
+            SELECT TOP 1 ch.TenCuaHang 
+            FROM ThanhVienCuocTroChuyen tv 
+            JOIN CuaHang ch ON tv.NguoiDungId = ch.NguoiBanId 
+            WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen
+          ) AS ShopName,
+          -- Logo Cửa hàng nếu có
+          (
+            SELECT TOP 1 ch.Logo 
+            FROM ThanhVienCuocTroChuyen tv 
+            JOIN CuaHang ch ON tv.NguoiDungId = ch.NguoiBanId 
+            WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen
+          ) AS ShopLogo
+        FROM CuocTroChuyen c
+        WHERE 1=1
+      `;
+      
+      // Filter logic cho Admin
+      if (filter === 'group') {
+        query += ` AND c.Loai = 'nhom'`;
+      } else if (filter === 'individual') {
+        // Chat cá nhân giữa các Buyers với nhau (không có Seller)
+        query += ` AND c.Loai = 'ca_nhan' AND NOT EXISTS (
+          SELECT 1 FROM ThanhVienCuocTroChuyen tv2 
+          JOIN NguoiDung n2 ON tv2.NguoiDungId = n2.MaNguoiDung
+          JOIN VaiTro v2 ON n2.VaiTroId = v2.MaVaiTro
+          WHERE tv2.CuocTroChuyenId = c.MaCuocTroChuyen AND v2.TenVaiTro = 'Seller'
+        )`;
+      } else if (filter === 'store') {
+        // Chat liên quan đến Cửa hàng (có ít nhất 1 Seller)
+        query += ` AND c.Loai = 'ca_nhan' AND EXISTS (
+          SELECT 1 FROM ThanhVienCuocTroChuyen tv2 
+          JOIN NguoiDung n2 ON tv2.NguoiDungId = n2.MaNguoiDung
+          JOIN VaiTro v2 ON n2.VaiTroId = v2.MaVaiTro
+          WHERE tv2.CuocTroChuyenId = c.MaCuocTroChuyen AND v2.TenVaiTro = 'Seller'
+        )`;
+      }
+    } else {
+      // TRƯỜNG HỢP SELLER/BUYER: Chỉ lấy cuộc trò chuyện của chính mình
+      query = `
+        SELECT 
+          c.MaCuocTroChuyen, 
+          c.TenCuocTroChuyen, 
+          c.Loai, 
+          c.NgayCapNhat,
+          (SELECT TOP 1 NoiDung FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessage,
+          (SELECT TOP 1 NgayGui FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessageTime,
+          (
+            SELECT TOP 1 n.HoTen 
+            FROM ThanhVienCuocTroChuyen tv 
+            JOIN NguoiDung n ON tv.NguoiDungId = n.MaNguoiDung 
+            WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen AND tv.NguoiDungId != @adminId
+          ) AS OtherUserName,
+          (
+            SELECT TOP 1 n.AnhDaiDien 
+            FROM ThanhVienCuocTroChuyen tv 
+            JOIN NguoiDung n ON tv.NguoiDungId = n.MaNguoiDung 
+            WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen AND tv.NguoiDungId != @adminId
+          ) AS OtherUserAvatar,
+          (
+            SELECT TOP 1 v.TenVaiTro
+            FROM ThanhVienCuocTroChuyen tv 
+            JOIN NguoiDung n ON tv.NguoiDungId = n.MaNguoiDung 
+            JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
+            WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen AND tv.NguoiDungId != @adminId
+          ) AS OtherUserRole,
+          (
+            SELECT TOP 1 ch.TenCuaHang 
+            FROM ThanhVienCuocTroChuyen tv 
+            JOIN CuaHang ch ON tv.NguoiDungId = ch.NguoiBanId 
+            WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen AND tv.NguoiDungId != @adminId
+          ) AS OtherUserShopName,
+          (
+            SELECT TOP 1 ch.Logo 
+            FROM ThanhVienCuocTroChuyen tv 
+            JOIN CuaHang ch ON tv.NguoiDungId = ch.NguoiBanId 
+            WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen AND tv.NguoiDungId != @adminId
+          ) AS OtherUserShopLogo
+        FROM CuocTroChuyen c
+        JOIN ThanhVienCuocTroChuyen my_tv ON c.MaCuocTroChuyen = my_tv.CuocTroChuyenId
+        WHERE my_tv.NguoiDungId = @adminId
+      `;
+      
+      // Filter logic cho Seller/Buyer
+      if (filter === 'group') {
+        query += ` AND c.Loai = 'nhom'`;
+      } else if (filter === 'individual') {
+        // Chat cá nhân giữa Buyer - Buyer hoặc Seller - Buyer (đối phương là Buyer)
+        query += ` AND c.Loai = 'ca_nhan' AND EXISTS (
+          SELECT 1 FROM ThanhVienCuocTroChuyen tv2 
+          JOIN NguoiDung n2 ON tv2.NguoiDungId = n2.MaNguoiDung
+          JOIN VaiTro v2 ON n2.VaiTroId = v2.MaVaiTro
+          WHERE tv2.CuocTroChuyenId = c.MaCuocTroChuyen AND tv2.NguoiDungId != @adminId AND v2.TenVaiTro = 'Buyer'
+        )`;
+      } else if (filter === 'store') {
+        // Chat liên quan đến Cửa hàng (đối phương là Seller)
+        query += ` AND c.Loai = 'ca_nhan' AND EXISTS (
+          SELECT 1 FROM ThanhVienCuocTroChuyen tv2 
+          JOIN NguoiDung n2 ON tv2.NguoiDungId = n2.MaNguoiDung
+          JOIN VaiTro v2 ON n2.VaiTroId = v2.MaVaiTro
+          WHERE tv2.CuocTroChuyenId = c.MaCuocTroChuyen AND tv2.NguoiDungId != @adminId AND v2.TenVaiTro = 'Seller'
+        )`;
+      }
     }
-
+    
     query += ` ORDER BY COALESCE((SELECT TOP 1 NgayGui FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC), c.NgayCapNhat) DESC`;
 
     const request = pool.request();
@@ -64,9 +165,31 @@ class ChatAdminService {
       let type = row.Loai;
       
       if (row.Loai === 'ca_nhan') {
-        name = row.OtherUserName || 'Người dùng';
-        if (row.OtherUserRole === 'Seller') type = 'store';
-        else type = 'individual';
+        if (isAdminUser) {
+          if (row.BuyerName && row.ShopName) {
+            name = `${row.BuyerName} (${row.ShopName})`;
+            avatar = row.ShopLogo || row.BuyerAvatar || null;
+            type = 'store';
+          } else if (row.ShopName) {
+            name = row.ShopName;
+            avatar = row.ShopLogo || null;
+            type = 'store';
+          } else {
+            name = row.BuyerName || 'Người dùng';
+            avatar = row.BuyerAvatar || null;
+            type = 'individual';
+          }
+        } else {
+          if (row.OtherUserRole === 'Seller') {
+            name = row.OtherUserShopName || row.OtherUserName || 'Cửa hàng';
+            avatar = row.OtherUserShopLogo || row.OtherUserAvatar || null;
+            type = 'store';
+          } else {
+            name = row.OtherUserName || 'Người dùng';
+            avatar = row.OtherUserAvatar || null;
+            type = 'individual';
+          }
+        }
       } else if (row.Loai === 'nhom') {
         type = 'group';
       }
@@ -78,7 +201,7 @@ class ChatAdminService {
         avatar: avatar,
         lastMessage: row.LastMessage,
         lastMessageTime: row.LastMessageTime || row.NgayCapNhat,
-        unreadCount: 0 // TODO: Tính số tin nhắn chưa đọc
+        unreadCount: 0
       };
     });
 
@@ -88,14 +211,29 @@ class ChatAdminService {
   async getMessages(conversationId, adminId) {
     const pool = await poolPromise;
     
-    // Kiểm tra quyền
-    const checkRole = await pool.request()
-      .input('convId', sql.UniqueIdentifier, conversationId)
+    // 1. Kiểm tra vai trò người dùng
+    const roleResult = await pool.request()
       .input('userId', sql.UniqueIdentifier, adminId)
-      .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @convId AND NguoiDungId = @userId`);
+      .query(`
+        SELECT v.TenVaiTro 
+        FROM NguoiDung n
+        JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
+        WHERE n.MaNguoiDung = @userId
+      `);
       
-    if (checkRole.recordset.length === 0) {
-      throw new Error('Bạn không có quyền xem cuộc trò chuyện này');
+    const userRole = roleResult.recordset[0]?.TenVaiTro;
+    const isAdminUser = userRole === 'Admin' || userRole === 'Moderator';
+    
+    if (!isAdminUser) {
+      // Kiểm tra quyền
+      const checkRole = await pool.request()
+        .input('convId', sql.UniqueIdentifier, conversationId)
+        .input('userId', sql.UniqueIdentifier, adminId)
+        .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @convId AND NguoiDungId = @userId`);
+        
+      if (checkRole.recordset.length === 0) {
+        throw new Error('Bạn không có quyền xem cuộc trò chuyện này');
+      }
     }
 
     const result = await pool.request()
@@ -109,6 +247,10 @@ class ChatAdminService {
           t.DaDoc,
           t.DaThuHoi,
           n.HoTen as SenderName,
+          n.AnhDaiDien as SenderAvatar,
+          v.TenVaiTro as UserRole,
+          ch.TenCuaHang as ShopName,
+          ch.Logo as ShopLogo,
           tv.VaiTro as SenderRole,
           (
              SELECT LoaiMedia, DuongDanMedia 
@@ -118,6 +260,8 @@ class ChatAdminService {
           ) as MediaFiles
         FROM TinNhan t
         JOIN NguoiDung n ON t.NguoiGuiId = n.MaNguoiDung
+        JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
+        LEFT JOIN CuaHang ch ON n.MaNguoiDung = ch.NguoiBanId
         LEFT JOIN ThanhVienCuocTroChuyen tv ON t.NguoiGuiId = tv.NguoiDungId AND t.CuocTroChuyenId = tv.CuocTroChuyenId
         WHERE t.CuocTroChuyenId = @convId
         ORDER BY t.NgayGui ASC
@@ -137,12 +281,20 @@ class ChatAdminService {
         }
       }
       
+      let name = row.SenderName;
+      let avatar = row.SenderAvatar;
+      if (row.UserRole === 'Seller') {
+        name = row.ShopName || row.SenderName;
+        avatar = row.ShopLogo || row.SenderAvatar || null;
+      }
+      
       return {
         id: row.MaTinNhan,
         content: row.NoiDung,
         timestamp: row.NgayGui,
         senderId: row.NguoiGuiId,
-        senderName: row.SenderName,
+        senderName: name,
+        senderAvatar: avatar,
         senderRole: row.SenderRole,
         isMe: row.NguoiGuiId === adminId,
         isRead: row.DaDoc,
@@ -213,14 +365,28 @@ class ChatAdminService {
     }
     const convId = msgResult.recordset[0].CuocTroChuyenId;
     
-    // Check role in conversation
-    const checkRole = await pool.request()
-      .input('convId', sql.UniqueIdentifier, convId)
+    // Check role in conversation (bypass if Admin/Moderator)
+    const roleResult = await pool.request()
       .input('userId', sql.UniqueIdentifier, adminId)
-      .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @convId AND NguoiDungId = @userId`);
+      .query(`
+        SELECT v.TenVaiTro 
+        FROM NguoiDung n
+        JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
+        WHERE n.MaNguoiDung = @userId
+      `);
       
-    if (checkRole.recordset.length === 0) {
-      throw new Error('Bạn không có quyền thực hiện hành động này');
+    const userRole = roleResult.recordset[0]?.TenVaiTro;
+    const isAdminUser = userRole === 'Admin' || userRole === 'Moderator';
+
+    if (!isAdminUser) {
+      const checkRole = await pool.request()
+        .input('convId', sql.UniqueIdentifier, convId)
+        .input('userId', sql.UniqueIdentifier, adminId)
+        .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @convId AND NguoiDungId = @userId`);
+        
+      if (checkRole.recordset.length === 0) {
+        throw new Error('Bạn không có quyền thực hiện hành động này');
+      }
     }
 
     const { deleteFile } = require('../utils/file.utils');
@@ -274,14 +440,28 @@ class ChatAdminService {
   async sendMessage(conversationId, adminId, content, files) {
     const pool = await poolPromise;
     
-    // Kiểm tra quyền
-    const checkRole = await pool.request()
-      .input('convId', sql.UniqueIdentifier, conversationId)
+    // Kiểm tra quyền (bypass if Admin/Moderator)
+    const roleResultMsg = await pool.request()
       .input('userId', sql.UniqueIdentifier, adminId)
-      .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @convId AND NguoiDungId = @userId`);
+      .query(`
+        SELECT v.TenVaiTro 
+        FROM NguoiDung n
+        JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
+        WHERE n.MaNguoiDung = @userId
+      `);
       
-    if (checkRole.recordset.length === 0) {
-      throw new Error('Bạn không có quyền gửi tin nhắn vào cuộc trò chuyện này');
+    const userRoleMsg = roleResultMsg.recordset[0]?.TenVaiTro;
+    const isAdminUserMsg = userRoleMsg === 'Admin' || userRoleMsg === 'Moderator';
+
+    if (!isAdminUserMsg) {
+      const checkRole = await pool.request()
+        .input('convId', sql.UniqueIdentifier, conversationId)
+        .input('userId', sql.UniqueIdentifier, adminId)
+        .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @convId AND NguoiDungId = @userId`);
+        
+      if (checkRole.recordset.length === 0) {
+        throw new Error('Bạn không có quyền gửi tin nhắn vào cuộc trò chuyện này');
+      }
     }
 
     const transaction = new sql.Transaction(pool);
@@ -337,14 +517,29 @@ class ChatAdminService {
       
       const userResult = await pool.request()
         .input('userId', sql.UniqueIdentifier, adminId)
-        .query(`SELECT HoTen FROM NguoiDung WHERE MaNguoiDung = @userId`);
+        .query(`
+          SELECT n.HoTen, n.AnhDaiDien, v.TenVaiTro, ch.TenCuaHang, ch.Logo
+          FROM NguoiDung n
+          JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
+          LEFT JOIN CuaHang ch ON n.MaNguoiDung = ch.NguoiBanId
+          WHERE n.MaNguoiDung = @userId
+        `);
+        
+      const userRow = userResult.recordset[0];
+      let name = userRow.HoTen;
+      let avatar = userRow.AnhDaiDien;
+      if (userRow.TenVaiTro === 'Seller') {
+        name = userRow.TenCuaHang || userRow.HoTen;
+        avatar = userRow.Logo || userRow.AnhDaiDien || null;
+      }
         
       return {
         id: newMessage.MaTinNhan,
         content: content || '',
         timestamp: newMessage.NgayGui,
         senderId: adminId,
-        senderName: userResult.recordset[0].HoTen,
+        senderName: name,
+        senderAvatar: avatar,
         isMe: true,
         media: mediaList
       };

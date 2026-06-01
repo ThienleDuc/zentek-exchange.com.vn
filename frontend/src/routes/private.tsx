@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { storage } from '../utils/storage.utils';
 import { hasAnyRole } from '../utils/role.utils';
 import type { RoleNames } from '../utils/role.utils';
-import { PATHS } from '../utils/path.utils';
+import { PATHS, isPathAllowed } from '../utils/path.utils';
 interface PrivateRouteProps {
   children: React.ReactNode;
   allowedRoles?: RoleNames[];
@@ -26,6 +26,12 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({
   // 2. Kiểm tra quyền truy cập (nếu có yêu cầu vai trò cụ thể)
   if (allowedRoles && !hasAnyRole(user, allowedRoles)) {
     // Nếu không có quyền, chuyển đến trang unauthorized
+    return <Navigate to={PATHS.AUTH.UNAUTHORIZED} replace />;
+  }
+
+  // 3. Kiểm tra chi tiết đường dẫn (phân quyền động theo ROLE_ALLOWED_PATHS)
+  const roleName = user.roleName || user.role;
+  if (roleName && !isPathAllowed(roleName as RoleNames, location.pathname)) {
     return <Navigate to={PATHS.AUTH.UNAUTHORIZED} replace />;
   }
 

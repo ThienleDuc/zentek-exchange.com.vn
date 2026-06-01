@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Image as ImageIcon, Paperclip, MoreVertical, X, Check, Loader2, Info, MoreHorizontal, Trash2, CheckCheck, MessageCircle } from 'lucide-react';
+import { Send, Image as ImageIcon, MoreVertical, Loader2, Info, MoreHorizontal, Trash2, CheckCheck, MessageCircle } from 'lucide-react';
 import dayjs from 'dayjs';
 import { type Conversation, type ChatMessage } from '../../../services/chatAdmin.service';
 import ShareLinkModal from './ShareLinkModal';
 import AddMemberModal from './AddMemberModal';
 import { REPO_URL } from '../../../services/api';
+import { getUserFromStorage, isAdmin, isSeller } from '../../../utils/role.utils';
 
 interface ChatBoxProps {
   activeConversation: Conversation | null;
@@ -17,6 +18,7 @@ interface ChatBoxProps {
 }
 
 const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage, onDeleteMessage, onDeleteGroup, isLoading }: ChatBoxProps) => {
+  const currentUser = getUserFromStorage();
   const [inputValue, setInputValue] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [showHiddenMessages, setShowHiddenMessages] = useState(false);
@@ -138,24 +140,28 @@ const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage,
               {activeConversation.type === 'group' && (
                 <>
                   <div className="border-t border-border-default my-1"></div>
-                  <button 
-                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-background transition-colors text-text-main font-medium"
-                    onClick={handleAddMember}
-                  >
-                    Thêm thành viên
-                  </button>
+                  {(isAdmin(currentUser) || isSeller(currentUser)) && (
+                    <button 
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-background transition-colors text-text-main font-medium"
+                      onClick={handleAddMember}
+                    >
+                      Thêm thành viên
+                    </button>
+                  )}
                   <button 
                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-background transition-colors text-text-main font-medium"
                     onClick={handleShareLink}
                   >
                     Chia sẻ link tham gia
                   </button>
-                  <button 
-                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-background transition-colors text-red-500 font-medium"
-                    onClick={handleDeleteGroupClick}
-                  >
-                    Xóa nhóm
-                  </button>
+                  {(isAdmin(currentUser) || isSeller(currentUser)) && (
+                    <button 
+                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-background transition-colors text-red-500 font-medium"
+                      onClick={handleDeleteGroupClick}
+                    >
+                      Xóa nhóm
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -194,8 +200,16 @@ const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage,
                   onMouseLeave={() => setHoveredMessageId(null)}
                 >
                   {!msg.isMe && (
-                    <div className="w-8 h-8 rounded-full bg-surface shrink-0 border border-border-default flex items-center justify-center text-xs font-bold text-text-muted">
-                      {msg.senderName.charAt(0)}
+                    <div className="w-8 h-8 rounded-full bg-surface shrink-0 border border-border-default flex items-center justify-center overflow-hidden">
+                      {msg.senderAvatar ? (
+                        <img 
+                          src={msg.senderAvatar.startsWith('http') ? msg.senderAvatar : `${REPO_URL}${msg.senderAvatar}`} 
+                          alt={msg.senderName} 
+                          className="w-full h-full object-cover" 
+                        />
+                      ) : (
+                        <span className="text-xs font-bold text-text-muted">{msg.senderName.charAt(0)}</span>
+                      )}
                     </div>
                   )}
 

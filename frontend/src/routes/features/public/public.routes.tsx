@@ -1,6 +1,9 @@
 import Home from '../../../pages/public/Home';
+import Search from '../../../pages/public/Search';
+import Stores from '../../../pages/public/Stores';
 import MainLayout from '../../../layouts/MainLayout';
 import { type CustomRouteObject } from '../../types';
+import { PATHS } from '../../../utils/path.utils';
 
 export const publicFeatureRoutes: CustomRouteObject[] = [
   {
@@ -11,5 +14,32 @@ export const publicFeatureRoutes: CustomRouteObject[] = [
       </MainLayout>
     ),
     isPublic: true // Public path doesn't strictly need auth, it handles redirects itself
+  },
+  {
+    path: PATHS.PUPLIC.SEARCH,
+    element: (
+      <MainLayout>
+        <Search />
+      </MainLayout>
+    ),
+    isPublic: true
+  },
+  {
+    path: PATHS.PUPLIC.PRODUCTS,
+    element: (
+      <MainLayout>
+        <Search />
+      </MainLayout>
+    ),
+    isPublic: true
+  },
+  {
+    path: PATHS.PUPLIC.STORES,
+    element: (
+      <MainLayout>
+        <Stores />
+      </MainLayout>
+    ),
+    isPublic: true
   }
 ];

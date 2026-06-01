@@ -242,3 +242,147 @@ Trên màn hình rất rộng (≥1280px), grid 6 cột giúp tận dụng khôn
 ---
 
 Kế hoạch này cung cấp đầy đủ mô tả để một nhà phát triển có thể hiểu và triển khai phần nội dung trang home của ZenTekExchange, bám sát cấu trúc database đã cho, có responsive và phân trang dạng offset/limit, với card sản phẩm tối giản chỉ gồm tiêu đề, giá, số lượng đã bán và toàn bộ card là link đến trang chi tiết.
+
+--------------------phân tách-----------------------
+
+# Kế hoạch thiết kế trang “Tìm kiếm” sản phẩm (dành cho khách hàng) – ZenTekExchange
+
+> **Phạm vi:** Chỉ phần thân trang tìm kiếm (main content), không bao gồm header, footer, danh mục (đã có component layout riêng).  
+> **Đối tượng:** Khách hàng (người mua).  
+> **Kỹ thuật:** ReactJS, TailwindCSS, responsive.  
+> **Dữ liệu:** Bám sát database `ZenTekExchange` – các bảng `SanPham`, `AnhSanPham`, `CuaHang`, `DanhMuc`, `DanhGiaSanPham`.
+
+---
+
+## 1. Mục đích và bố cục tổng thể
+
+**Mục đích:** Cho phép khách hàng tìm kiếm sản phẩm theo từ khóa, lọc theo nhiều tiêu chí (danh mục, giá, đánh giá, tình trạng, cửa hàng…), sắp xếp kết quả, và phân trang.
+
+**Bố cục:** Chia làm hai vùng chính:
+
+| Vùng             | Nội dung                                                               | Độ rộng (desktop)        |
+| ---------------- | ---------------------------------------------------------------------- | ------------------------ |
+| **Sidebar trái** | Bộ lọc tìm kiếm (danh mục, khoảng giá, đánh giá, tình trạng, cửa hàng) | 280px (cố định)          |
+| **Vùng phải**    | Thanh công cụ (kết quả, sắp xếp, hiển thị), grid sản phẩm, phân trang  | Phần còn lại (flex-grow) |
+
+- Trên mobile (<1024px): Sidebar ẩn đi, thay bằng nút “Bộ lọc” mở modal/drawer.
+- Trên tablet (768-1024px): Có thể thu nhỏ sidebar hoặc chuyển thành drawer.
+
+---
+
+## 2. Dữ liệu hiển thị – Nguồn từ database
+
+- **Bảng chính:** `SanPham`
+- **JOIN với:** `AnhSanPham` (lấy ảnh chính), `CuaHang` (tên shop, trạng thái), `DanhMuc` (tên danh mục), `DanhGiaSanPham` (tính điểm TB và số lượng).
+- **Điều kiện lọc:**
+  - `SanPham.TrangThaiDuyet = N'Đã duyệt'`
+  - `SanPham.TrangThaiHienThi = 1`
+  - `CuaHang.TrangThai = 1` (cửa hàng hoạt động)
+  - `NguoiDung.DaXoa = 0` (người bán chưa bị khóa) – qua `CuaHang.NguoiBanId`
+- **Tìm kiếm theo từ khóa:** `TieuDe` LIKE `%keyword%` hoặc dùng Full-Text Search.
+- **Lọc theo:**
+  - Danh mục (`DanhMucId` hoặc danh mục con)
+  - Khoảng giá (`Gia BETWEEN min AND max`)
+  - Đánh giá (`DiemDanhGia >= rating`)
+  - Tình trạng (`TinhTrang` = N'Mới' hoặc N'Cũ')
+  - Cửa hàng (`CuaHangId` – có thể nhiều)
+- **Sắp xếp:** Giá tăng dần/giảm dần, bán chạy nhất (`SoLuongDaBan`), mới nhất (`NgayDang`), đánh giá cao nhất (`DiemDanhGia`).
+- **Phân trang:** `limit = 20` (hoặc 12), `offset = (page-1)*limit`.
+
+---
+
+## 3. Cấu trúc chi tiết từng phần
+
+### 3.1. Sidebar bộ lọc (cột trái)
+
+- **Tiêu đề:** “Bộ lọc tìm kiếm” + nút “Đặt lại” (xóa tất cả filter).
+- **Các nhóm lọc:**
+
+#### a. Danh mục sản phẩm
+
+- Hiển thị danh sách danh mục cấp 1 (hoặc cây danh mục).
+- Checkbox hoặc radio (nếu chỉ chọn một).
+- Lấy từ bảng `DanhMuc`, có thể lọc sâu theo danh mục con.
+
+#### b. Khoảng giá
+
+- Dạng slider kép (min – max) hoặc các nút khoảng giá có sẵn:
+  - Dưới 100.000₫
+  - 100.000₫ – 500.000₫
+  - 500.000₫ – 1.000.000₫
+  - Trên 1.000.000₫
+- Input số tùy chỉnh (từ – đến).
+
+#### c. Đánh giá (sao)
+
+- Checkbox các mức: từ 5 sao, 4 sao trở lên, 3 sao trở lên, …
+- Hiển thị dạng sao (5 sao, 4 sao…).
+
+#### d. Tình trạng
+
+- Checkbox: Mới, Cũ (lấy từ `TinhTrang`).
+
+#### e. Cửa hàng (nâng cao)
+
+- Có thể lọc theo tên cửa hàng (nếu có nhiều kết quả từ nhiều shop).
+
+#### f. Nút “Áp dụng bộ lọc”
+
+- Gọi lại API với các filter đã chọn.
+
+### 3.2. Vùng kết quả (cột phải)
+
+#### a. Thanh công cụ
+
+- **Số lượng kết quả:** Hiển thị “Tìm thấy X sản phẩm”.
+- **Sắp xếp:** Dropdown với các lựa chọn:
+  - Liên quan nhất (mặc định – theo độ match từ khóa)
+  - Mới nhất
+  - Giá thấp đến cao
+  - Giá cao đến thấp
+  - Bán chạy nhất
+  - Đánh giá cao nhất
+- **Hiển thị dạng lưới / danh sách:** Icon toggle (grid/list) – nếu có.
+- **Nút “Bộ lọc” (mobile):** Mở sidebar dạng drawer.
+
+#### b. Grid sản phẩm (dạng lưới)
+
+- Sử dụng responsive grid: 2 cột (mobile), 3 cột (tablet), 4-5 cột (desktop).
+- Mỗi card sản phẩm hiển thị: (theo thiết kế đã thống nhất trước đó – chỉ gồm ảnh, tiêu đề, giá, đã bán)
+  - Ảnh đại diện (lấy từ `AnhSanPham`)
+  - Tiêu đề (`TieuDe`, giới hạn 2 dòng)
+  - Giá (`Gia`, định dạng VND)
+  - Số lượng đã bán (`SoLuongDaBan`)
+  - (Có thể thêm badge “Mới” / “Cũ” nếu muốn, nhưng theo yêu cầu cắt giảm thì không)
+- Toàn bộ card là link đến trang chi tiết sản phẩm.
+- Nếu không có kết quả: Hiển thị thông báo “Không tìm thấy sản phẩm phù hợp” + gợi ý bỏ bớt bộ lọc.
+
+#### c. Phân trang
+
+- Ở dưới cùng grid.
+- Dạng số trang hoặc nút “Xem thêm” (load more). Đề xuất dùng phân trang số trang (1,2,3…) để dễ dàng quay lại.
+- Mỗi trang hiển thị `limit` sản phẩm.
+- Có nút Previous / Next.
+
+---
+
+## 4. Luồng dữ liệu và API
+
+### 4.1. URL và query parameters
+
+- Đường dẫn: `/tim-kiem?q={keyword}&page={page}&sort={sort}&category={catId}&priceMin={min}&priceMax={max}&rating={rating}&condition={new|used}&store={storeId}`
+- Sử dụng React Router `useSearchParams` để đồng bộ filter với URL (giúp chia sẻ link tìm kiếm).
+
+### 4.2. API endpoint
+
+- `GET /api/products/search` với các query params trên.
+- Server trả về:
+  ```json
+  {
+    "total": 123,
+    "page": 1,
+    "limit": 20,
+    "totalPages": 7,
+    "products": [ ... ]
+  }
+  ```

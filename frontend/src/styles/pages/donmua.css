@@ -1,0 +1,304 @@
+/* DonMua.css - Trang Đơn mua (kiểu Shopee) */
+
+.don-mua-page {
+  background-color: #f5f5f5;
+  min-height: 100vh;
+  padding: 1rem 0 2rem 0;
+
+  .don-mua-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  /* Thanh tìm kiếm full-width */
+  .don-mua__search-wrapper {
+    margin-bottom: 1.5rem;
+  }
+
+  .don-mua__search-box {
+    position: relative;
+    width: 100%;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    border: 1px solid #e0e0e0;
+    transition: all 0.2s;
+  }
+
+  .don-mua__search-box:focus-within {
+    border-color: #ee4d2d;
+    box-shadow: 0 0 0 2px rgba(238,77,45,0.2);
+  }
+
+  .don-mua__search-icon {
+    position: absolute;
+    left: 1rem;
+    color: #999;
+    pointer-events: none;
+  }
+
+  .don-mua__search-input {
+    width: 100%;
+    padding: 0.9rem 3rem 0.9rem 3rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    outline: none;
+    background: transparent;
+  }
+
+  .don-mua__search-clear {
+    position: absolute;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #999;
+    padding: 0;
+  }
+
+  /* Tabs trạng thái */
+  .don-mua-tabs {
+    display: flex;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+  }
+  .don-mua-tab {
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+    padding: 1rem 0;
+    border: none;
+    background: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #555;
+    cursor: pointer;
+    transition: color 0.2s;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  .don-mua-tab:hover {
+    color: #ee4d2d;
+  }
+  .don-mua-tab--active {
+    color: #ee4d2d;
+    border-bottom-color: #ee4d2d;
+  }
+
+  /* Danh sách đơn */
+  .don-mua-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .don-mua__card {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+
+  .don-mua__card-header {
+    padding: 1rem;
+    border-bottom: 1px solid #efefef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .don-mua__order-id {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .don-mua__order-date {
+    font-size: 0.8rem;
+    color: #888;
+    margin-left: 1rem;
+  }
+  .don-mua__status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .don-mua__items {
+    padding: 0.5rem 1rem;
+  }
+  .don-mua__item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .don-mua__item:last-child {
+    border-bottom: none;
+  }
+  .don-mua__item-img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 0.25rem;
+  }
+  .don-mua__item-details {
+    flex: 2;
+  }
+  .don-mua__item-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+  .don-mua__item-variant {
+    font-size: 0.7rem;
+    color: #888;
+  }
+  .don-mua__item-price {
+    font-size: 0.8rem;
+    color: #555;
+  }
+  .don-mua__item-total {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .don-mua__more-items {
+    padding: 0.5rem 0;
+    color: #ee4d2d;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+
+  .don-mua__card-footer {
+    padding: 1rem;
+    border-top: 1px solid #efefef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    background-color: white;
+  }
+  .don-mua__total {
+    font-size: 0.9rem;
+  }
+  .don-mua__actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .don-mua__btn {
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .don-mua__btn--primary {
+    background: #ee4d2d;
+    color: white;
+  }
+  .don-mua__btn--primary:hover {
+    background: #d73211;
+  }
+  .don-mua__btn--outline {
+    border-color: #ccc;
+    background: white;
+    color: #333;
+  }
+  .don-mua__btn--outline:hover {
+    border-color: #ee4d2d;
+    color: #ee4d2d;
+  }
+  .don-mua__btn--secondary {
+    background: #f5f5f5;
+    border-color: #ddd;
+    color: #333;
+  }
+  .don-mua__btn--secondary:hover {
+    background: #e9e9e9;
+  }
+  .don-mua__btn--link {
+    background: none;
+    color: #ee4d2d;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .don-mua__btn--link:hover {
+    text-decoration: underline;
+  }
+
+  /* Empty state */
+  .don-mua-empty {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 0.5rem;
+    color: #888;
+  }
+  .don-mua-empty svg {
+    color: #ccc;
+    margin-bottom: 1rem;
+  }
+
+  /* Skeleton loading */
+  .don-mua-skeleton-card {
+    background: white;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+  }
+  .don-mua-skeleton-header,
+  .don-mua-skeleton-item,
+  .don-mua-skeleton-footer {
+    background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite;
+    border-radius: 0.25rem;
+    height: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  .don-mua-skeleton-header { width: 50%; height: 2rem; }
+  .don-mua-skeleton-item { height: 5rem; }
+  .don-mua-skeleton-footer { width: 30%; height: 2rem; }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .don-mua-container {
+      padding: 0 0.75rem;
+    }
+    .don-mua__card-footer {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .don-mua__actions {
+      justify-content: flex-start;
+    }
+    .don-mua__item {
+      flex-wrap: wrap;
+    }
+    .don-mua__item-total {
+      margin-left: auto;
+    }
+    .don-mua-tab {
+      padding: 0.5rem 0.8rem;
+      font-size: 0.8rem;
+    }
+  }
+}

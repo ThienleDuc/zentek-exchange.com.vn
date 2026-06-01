@@ -1,3 +1,4 @@
+/*../../../../225TMDT/TMDT-Website/frontend/src/styles/global.css*/
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* --- Reset và các kiểu cơ bản toàn cục --- */
@@ -164,4 +165,56 @@ a:hover {
   font-size: 0.875rem;
   color: var(--danger);
   margin-top: 0.25rem;
+}
+
+/* Container chuẩn cho nội dung */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 1rem;
+  }
+}
+
+/* Skeleton loading (dùng chung) */
+.skeleton-card {
+  background-color: var(--surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.skeleton-image {
+  aspect-ratio: 1 / 1;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
+
+.skeleton-text {
+  height: 0.9rem;
+  background-color: var(--border);
+  margin: 0.75rem 0.75rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-text.short {
+  width: 60%;
+}
+
+.skeleton-price {
+  height: 1.2rem;
+  width: 50%;
+  margin: 0.5rem 0.75rem 0.75rem;
+  background-color: var(--border);
+  border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

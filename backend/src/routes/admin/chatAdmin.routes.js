@@ -3,15 +3,15 @@ const router = express.Router();
 const chatAdminController = require('../../controllers/chatAdmin.controller');
 const { authenticateToken, authorizeRoles } = require('../../middlewares/auth/auth.middleware');
 
-// Áp dụng middleware xác thực và kiểm tra quyền Admin
+// Áp dụng middleware xác thực và kiểm tra quyền chung cho tất cả các vai trò
 router.use(authenticateToken);
-router.use(authorizeRoles('Admin', 'Moderator'));
+router.use(authorizeRoles('Admin', 'Moderator', 'Seller', 'Buyer'));
 
 // Lấy danh sách các cuộc trò chuyện
 router.get('/', chatAdminController.getConversations);
 
-// Tạo nhóm mới
-router.post('/group', chatAdminController.createGroup);
+// Tạo nhóm mới - Chỉ cho phép Admin, Moderator, Seller
+router.post('/group', authorizeRoles('Admin', 'Moderator', 'Seller'), chatAdminController.createGroup);
 
 // Lấy danh sách tin nhắn của một cuộc trò chuyện
 router.get('/:id/messages', chatAdminController.getMessages);
@@ -27,10 +27,10 @@ router.put('/:id/messages/:msgId/recall', chatAdminController.recallMessage);
 // Xóa tin nhắn vĩnh viễn (Hard Delete)
 router.delete('/:id/messages/:msgId', chatAdminController.deleteMessage);
 
-// Xóa nhóm
-router.delete('/groups/:groupId', chatAdminController.deleteGroup);
+// Xóa nhóm - Chỉ cho phép Admin, Moderator, Seller
+router.delete('/groups/:groupId', authorizeRoles('Admin', 'Moderator', 'Seller'), chatAdminController.deleteGroup);
 
-// Thêm thành viên vào nhóm
-router.post('/groups/:groupId/members', chatAdminController.addMembers);
+// Thêm thành viên vào nhóm - Chỉ cho phép Admin, Moderator, Seller
+router.post('/groups/:groupId/members', authorizeRoles('Admin', 'Moderator', 'Seller'), chatAdminController.addMembers);
 
 module.exports = router;

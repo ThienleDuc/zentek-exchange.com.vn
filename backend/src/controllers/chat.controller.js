@@ -4,7 +4,7 @@ class ChatController {
   async joinCommunity(req, res) {
     try {
       const userId = req.user.userId;
-      const role = req.user.role; // Lấy role từ JWT token
+      const role = req.user.roleName || req.user.role; // Lấy role từ JWT token
       
       if (!role) {
         return res.status(403).json({ success: false, message: 'Không thể xác định vai trò người dùng' });

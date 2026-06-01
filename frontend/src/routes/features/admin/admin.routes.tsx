@@ -16,7 +16,7 @@ export const adminRoutes: CustomRouteObject[] = [
     path: PATHS.ADMIN.ROOT, 
     element: <AdminLayout />,
     isPublic: false,
-    allowedRoles: [ROLE_NAMES.ADMIN],
+    allowedRoles: [ROLE_NAMES.ADMIN, ROLE_NAMES.SELLER],
     children: [
       {
         path: PATHS.ADMIN.DASHBOARD.replace(`${PATHS.ADMIN.ROOT}/`, ''),

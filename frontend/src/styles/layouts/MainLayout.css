@@ -1,0 +1,24 @@
+/* MainLayout.css - Giới hạn width và căn giữa nội dung */
+
+/* Container chính cho nội dung trang */
+.main-layout-content {
+  width: 100%;
+  max-width: 1200px;        /* Giới hạn chiều rộng tối đa */
+  margin-left: auto;
+  margin-right: auto;       /* Căn giữa */
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  flex: 1;
+}
+
+/* Responsive: trên màn hình nhỏ hơn 1200px, vẫn giữ padding hai bên */
+@media (max-width: 768px) {
+  .main-layout-content {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+}

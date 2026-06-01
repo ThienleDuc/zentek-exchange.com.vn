@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as Icons from 'lucide-react';
-
+import { getUserFromStorage, isBuyer } from '../../utils/role.utils';
+import { PUBLIC_NAV_ITEMS, BUYER_NAV_ITEMS } from '../../utils/nav.utils';
 
 // Định nghĩa interface cho Danh Mục (trùng với DB + API)
 export interface Category {
@@ -23,6 +24,15 @@ const DynamicIcon = ({ iconName, size = 20 }: { iconName: string; size?: number 
 const CategoryNav: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const currentUser = getUserFromStorage();
+  const isUserBuyer = isBuyer(currentUser);
+  const navItems = isUserBuyer ? BUYER_NAV_ITEMS : PUBLIC_NAV_ITEMS;
+
+  const renderNavIcon = (iconName: string, className?: string) => {
+    const IconComponent = (Icons as any)[iconName];
+    if (!IconComponent) return null;
+    return <IconComponent size={16} className={className} />;
+  };
 
   useEffect(() => {
     // Gọi API lấy danh sách danh mục (dạng tree)
@@ -113,18 +123,15 @@ const CategoryNav: React.FC = () => {
 
         {/* Các liên kết nhanh (Ngang) */}
         <div className="flex items-center gap-8 h-full">
-          <Link to="/" className="text-gray-600 hover:text-primary text-sm font-medium transition-colors flex items-center gap-1.5">
-            <Icons.Home size={16} className="text-primary" /> Trang chủ
-          </Link>
-          <Link to="/products" className="text-gray-600 hover:text-primary text-sm font-medium transition-colors flex items-center gap-1.5">
-            <Icons.ShoppingBag size={16} className="text-secondary" /> Tất cả sản phẩm
-          </Link>
-          <Link to="/shops" className="text-gray-600 hover:text-primary text-sm font-medium transition-colors flex items-center gap-1.5">
-            <Icons.Store size={16} className="text-accent" /> Khám phá cửa hàng
-          </Link>
-          <Link to="/chat" className="text-gray-600 hover:text-primary text-sm font-medium transition-colors flex items-center gap-1.5">
-            <Icons.MessageCircle size={16} className="text-info" /> Chat cộng đồng
-          </Link>
+          {navItems.map((item) => (
+            <Link 
+              key={item.path} 
+              to={item.path} 
+              className="text-gray-600 hover:text-primary text-sm font-medium transition-colors flex items-center gap-1.5"
+            >
+              {renderNavIcon(item.icon, item.color)} {item.label}
+            </Link>
+          ))}
         </div>
 
       </div>

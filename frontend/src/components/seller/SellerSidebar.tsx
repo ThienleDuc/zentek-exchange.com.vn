@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, ShoppingCart, Store, MessageSquare, Settings, LogOut, ChevronDown, User as UserIcon } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingCart, Store, MessageSquare, LogOut, ChevronDown, User as UserIcon, Key } from 'lucide-react';
 import { PATHS } from '../../utils/path.utils';
 import { storage } from '../../utils/storage.utils';
 import { type User } from '../../utils/role.utils';
@@ -36,27 +36,27 @@ const SellerSidebar: React.FC = () => {
     {
       title: 'Quản lý Đơn hàng',
       icon: <ShoppingCart size={20} />,
-      path: '/seller/orders'
+      path: PATHS.Buyer.ORDERS
     },
     {
       title: 'Quản lý Sản phẩm',
       icon: <Package size={20} />,
-      path: '/seller/products'
+      path: PATHS.ADMIN.PRODUCT_MANAGEMENT
     },
     {
       title: 'Hồ sơ Shop',
       icon: <Store size={20} />,
-      path: PATHS.Seller.SHOP || '/seller/cua-hang'
+      path: PATHS.Seller.SHOP
     },
     {
       title: 'Khách hàng & Chat',
       icon: <MessageSquare size={20} />,
-      path: '/seller/chat'
+      path: PATHS.Seller.MESSAGES
     },
     {
-      title: 'Thiết lập',
-      icon: <Settings size={20} />,
-      path: '/seller/settings'
+      title: 'Đổi mật khẩu',
+      icon: <Key size={20} />,
+      path: PATHS.Buyer.DOI_MAT_KHAU
     }
   ];
 
