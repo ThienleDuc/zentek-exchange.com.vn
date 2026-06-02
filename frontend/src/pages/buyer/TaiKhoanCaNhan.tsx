@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { User, Camera, Trash2, ArrowLeft, Send } from 'lucide-react';
 import { storage } from '../../utils/storage.utils';
 import { PATHS } from '../../utils/path.utils';
+import { getUserProfile, updateUserProfile, sendOtp, verifyOtp as verifyOtpApi } from '../../services/profile.service';
+import { uploadImage } from '../../services/upload.service';
 
 interface UserProfile {
   HoTen: string;
@@ -26,6 +28,7 @@ const TaiKhoanCaNhan: React.FC = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -40,19 +43,20 @@ const TaiKhoanCaNhan: React.FC = () => {
     const fetchProfile = async () => {
       setLoading(true);
       try {
-        console.log(`[API giả định] GET /api/user/profile?userId=${userId}`);
-        await new Promise(resolve => setTimeout(resolve, 800));
-        const mockProfile: UserProfile = {
-          HoTen: 'Trần Thị Bích',
-          TenDangNhap: 'buyer01',
-          Email: 'buyer01@gmail.com',
-          SoDienThoai: '0911111111',
-          AnhDaiDien: null,
-        };
-        setFormData(mockProfile);
-        setAvatarPreview(mockProfile.AnhDaiDien);
-      } catch (err) {
-        setErrorMsg('Không thể tải thông tin. Vui lòng thử lại.');
+        const response = await getUserProfile();
+        if (response.success && response.data) {
+          const profileData: UserProfile = {
+            HoTen: response.data.HoTen || '',
+            TenDangNhap: response.data.TenDangNhap || '',
+            Email: response.data.Email || '',
+            SoDienThoai: response.data.SoDienThoai || '',
+            AnhDaiDien: response.data.AnhDaiDien || null,
+          };
+          setFormData(profileData);
+          setAvatarPreview(response.data.AnhDaiDien);
+        }
+      } catch (err: any) {
+        setErrorMsg(err.message || 'Không thể tải thông tin. Vui lòng thử lại.');
       } finally {
         setLoading(false);
       }
@@ -84,10 +88,82 @@ const TaiKhoanCaNhan: React.FC = () => {
     setErrors(prev => ({ ...prev, avatar: '' }));
   };
 
-  const handleRemoveAvatar = () => {
+  const handleRemoveAvatar = async () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const payload = {
+        HoTen: formData.HoTen,
+        Email: formData.Email,
+        SoDienThoai: formData.SoDienThoai || null,
+        AnhDaiDien: null,
+      };
+      const updateRes = await updateUserProfile(payload);
+      if (updateRes.success) {
+        setFormData(prev => ({ ...prev, AnhDaiDien: null }));
+        setAvatarFile(null);
+        setAvatarPreview(null);
+        // Cập nhật local storage
+        const currentUser = storage.getUser();
+        if (currentUser) {
+          storage.setUser({
+            ...currentUser,
+            avatar: undefined
+          });
+        }
+        setSuccessMsg('Xóa ảnh đại diện thành công!');
+      } else {
+        setErrorMsg(updateRes.message || 'Lỗi cập nhật profile.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Có lỗi xảy ra.');
+    }
+  };
+
+  const handleSaveAvatar = async () => {
+    if (!avatarFile) return;
+    setUploadingAvatar(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const uploadRes = await uploadImage(avatarFile);
+      if (uploadRes.success && uploadRes.url) {
+        const newAvatarUrl = uploadRes.url;
+        const payload = {
+          HoTen: formData.HoTen,
+          Email: formData.Email,
+          SoDienThoai: formData.SoDienThoai || null,
+          AnhDaiDien: newAvatarUrl,
+        };
+        const updateRes = await updateUserProfile(payload);
+        if (updateRes.success) {
+          setFormData(prev => ({ ...prev, AnhDaiDien: newAvatarUrl }));
+          setAvatarFile(null);
+          // Cập nhật local storage
+          const currentUser = storage.getUser();
+          if (currentUser) {
+            storage.setUser({
+              ...currentUser,
+              avatar: newAvatarUrl
+            });
+          }
+          setSuccessMsg('Lưu ảnh đại diện thành công!');
+        } else {
+          setErrorMsg(updateRes.message || 'Lỗi cập nhật profile.');
+        }
+      } else {
+        setErrorMsg(uploadRes.message || 'Tải ảnh lên thất bại.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Có lỗi xảy ra.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleCancelAvatar = () => {
     setAvatarFile(null);
-    setAvatarPreview(null);
-    setFormData(prev => ({ ...prev, AnhDaiDien: null }));
+    setAvatarPreview(formData.AnhDaiDien);
   };
 
   // Gửi OTP
@@ -99,11 +175,14 @@ const TaiKhoanCaNhan: React.FC = () => {
     setSendingOtp(true);
     setErrors(prev => ({ ...prev, otp: '' }));
     try {
-      console.log(`[API giả định] POST /api/auth/send-otp`, { email: formData.Email });
-      await new Promise(resolve => setTimeout(resolve, 800));
-      setSuccessMsg('Mã OTP đã được gửi đến email của bạn.');
-    } catch (err) {
-      setErrorMsg('Gửi OTP thất bại. Vui lòng thử lại.');
+      const response = await sendOtp({ email: formData.Email });
+      if (response.success) {
+        setSuccessMsg(response.message || 'Mã OTP đã được gửi đến email của bạn.');
+      } else {
+        setErrorMsg(response.message || 'Gửi OTP thất bại. Vui lòng thử lại.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Gửi OTP thất bại. Vui lòng thử lại.');
     } finally {
       setSendingOtp(false);
     }
@@ -112,9 +191,8 @@ const TaiKhoanCaNhan: React.FC = () => {
   // Hàm xác thực OTP (được gọi khi lưu)
   const verifyOtp = async (email: string, otp: string): Promise<boolean> => {
     try {
-      console.log(`[API giả định] POST /api/auth/verify-otp`, { email, otp });
-      await new Promise(resolve => setTimeout(resolve, 600));
-      return true; // Giả sử luôn đúng, thực tế sẽ dựa trên response
+      const response = await verifyOtpApi({ email, otp });
+      return response.success;
     } catch (err) {
       return false;
     }
@@ -147,19 +225,9 @@ const TaiKhoanCaNhan: React.FC = () => {
       // 1. Xác thực OTP với email hiện tại trong form
       const isOtpValid = await verifyOtp(formData.Email, otpCode);
       if (!isOtpValid) {
-        setErrors(prev => ({ ...prev, otp: 'Mã OTP không chính xác.' }));
+        setErrors(prev => ({ ...prev, otp: 'Mã OTP không chính xác hoặc hết hạn.' }));
         setSubmitting(false);
         return;
-      }
-
-      // 2. Xử lý ảnh đại diện nếu có thay đổi
-      let uploadedImageUrl = formData.AnhDaiDien;
-      if (avatarFile) {
-        console.log(`[API giả định] Upload ảnh: ${avatarFile.name}`);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        uploadedImageUrl = 'https://picsum.photos/id/100/200/200';
-      } else if (avatarPreview === null && formData.AnhDaiDien !== null) {
-        uploadedImageUrl = null;
       }
 
       // 3. Cập nhật thông tin người dùng
@@ -167,15 +235,29 @@ const TaiKhoanCaNhan: React.FC = () => {
         HoTen: formData.HoTen,
         Email: formData.Email,
         SoDienThoai: formData.SoDienThoai || null,
-        AnhDaiDien: uploadedImageUrl,
+        AnhDaiDien: formData.AnhDaiDien,
+        otp: otpCode,
       };
-      console.log(`[API giả định] PUT /api/user/profile`, payload);
-      await new Promise(resolve => setTimeout(resolve, 800));
 
-      setSuccessMsg('Cập nhật thông tin thành công!');
-      setTimeout(() => navigate(PATHS.Buyer.DASHBOARD), 2000);
-    } catch (err) {
-      setErrorMsg('Cập nhật thất bại. Vui lòng thử lại.');
+      const updateRes = await updateUserProfile(payload);
+      if (updateRes.success) {
+        setSuccessMsg('Cập nhật thông tin thành công!');
+        // Cập nhật storage để hiển thị tên và avatar mới ngay trên thanh điều hướng
+        const currentUser = storage.getUser();
+        if (currentUser) {
+          storage.setUser({
+            ...currentUser,
+            fullName: formData.HoTen,
+            email: formData.Email,
+            avatar: formData.AnhDaiDien || undefined
+          });
+        }
+        setTimeout(() => navigate(PATHS.Buyer.DASHBOARD), 2000);
+      } else {
+        setErrorMsg(updateRes.message || 'Cập nhật thất bại. Vui lòng thử lại.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Cập nhật thất bại. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
@@ -309,14 +391,27 @@ const TaiKhoanCaNhan: React.FC = () => {
                 )}
               </div>
               <div className="avatar-actions">
-                <label className="avatar-btn upload">
-                  <Camera size={16} /> Chọn ảnh
-                  <input type="file" accept="image/jpeg,image/png,image/gif" onChange={handleAvatarChange} hidden />
-                </label>
-                {avatarPreview && (
-                  <button type="button" className="avatar-btn remove" onClick={handleRemoveAvatar}>
-                    <Trash2 size={16} /> Xóa ảnh
-                  </button>
+                {!avatarFile ? (
+                  <>
+                    <label className="avatar-btn upload">
+                      <Camera size={16} /> Chọn ảnh
+                      <input type="file" accept="image/jpeg,image/png,image/gif" onChange={handleAvatarChange} hidden />
+                    </label>
+                    {avatarPreview && (
+                      <button type="button" className="avatar-btn remove" onClick={handleRemoveAvatar}>
+                        <Trash2 size={16} /> Xóa ảnh
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="avatar-btn save" onClick={handleSaveAvatar} disabled={uploadingAvatar}>
+                      {uploadingAvatar ? 'Đang lưu...' : 'Lưu'}
+                    </button>
+                    <button type="button" className="avatar-btn cancel" onClick={handleCancelAvatar} disabled={uploadingAvatar}>
+                      Hủy
+                    </button>
+                  </>
                 )}
               </div>
               {errors.avatar && <div className="field-error center">{errors.avatar}</div>}

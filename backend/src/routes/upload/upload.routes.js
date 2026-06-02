@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const uploadController = require('../../controllers/upload/upload.controller');
-const { uploadDocumentMiddleware, uploadImageMiddleware } = require('../../utils/file.utils');
+const { uploadDocumentMiddleware, uploadImageMiddleware, uploadMediaMiddleware } = require('../../utils/file.utils');
 
 // Upload file document (cần gửi dữ liệu dạng multipart/form-data với field 'file')
 router.post('/document', (req, res, next) => {
@@ -31,5 +31,14 @@ router.post('/image', (req, res, next) => {
 
 // Xóa hình ảnh
 router.delete('/image', uploadController.deleteDocument);
+
+// Upload media (Đánh giá)
+router.post('/media', (req, res, next) => {
+  const upload = uploadMediaMiddleware.single('file');
+  upload(req, res, function (err) {
+    if (err) return res.status(400).json({ success: false, message: err.message });
+    next();
+  });
+}, uploadController.uploadMedia);
 
 module.exports = router;

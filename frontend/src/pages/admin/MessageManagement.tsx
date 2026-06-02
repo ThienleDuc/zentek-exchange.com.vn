@@ -41,13 +41,26 @@ const MessageManagement = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
-  // Tự động mở/tham gia cộng đồng khi có query ?community=true hoặc mở chat cửa hàng bằng ?store=TenCuaHang
+  // Tự động mở/tham gia cộng đồng khi có query ?community=true, ?store=TenCuaHang hoặc ?chatId=...
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const openCommunity = queryParams.get('community') === 'true';
     const storeName = queryParams.get('store');
+    const chatId = queryParams.get('chatId');
     
-    if (openCommunity) {
+    if (chatId) {
+      const handleOpenChat = async () => {
+        const currentConversations = await fetchConversations();
+        const found = currentConversations.find(c => c.id === chatId);
+        if (found) {
+          setActiveChatId(chatId);
+        } else {
+          // If not found in current list, still set it so we can load messages
+          setActiveChatId(chatId);
+        }
+      };
+      handleOpenChat();
+    } else if (openCommunity) {
       const handleAutoJoinAndOpen = async () => {
         const currentConversations = await fetchConversations();
         

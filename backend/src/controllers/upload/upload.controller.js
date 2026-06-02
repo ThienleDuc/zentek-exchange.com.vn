@@ -65,6 +65,27 @@ class UploadController {
       return res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi xóa file.' });
     }
   }
+
+  /**
+   * Upload media (Hình ảnh, Video đánh giá)
+   */
+  async uploadMedia(req, res) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'Vui lòng chọn file media hợp lệ để tải lên.' });
+      }
+
+      const fileUrl = `/uploads/media/${req.file.filename}`;
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Tải media thành công.',
+        url: fileUrl
+      });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message || 'Lỗi hệ thống khi tải media.' });
+    }
+  }
 }
 
 module.exports = new UploadController();

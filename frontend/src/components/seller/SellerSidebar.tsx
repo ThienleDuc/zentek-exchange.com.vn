@@ -41,7 +41,7 @@ const SellerSidebar: React.FC = () => {
     {
       title: 'Quản lý Sản phẩm',
       icon: <Package size={20} />,
-      path: PATHS.ADMIN.PRODUCT_MANAGEMENT
+      path: PATHS.Seller.PRODUCTS
     },
     {
       title: 'Hồ sơ Shop',

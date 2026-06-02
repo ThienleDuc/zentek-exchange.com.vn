@@ -12,4 +12,10 @@ router.post('/join-community', chatController.joinCommunity);
 // Tham gia nhóm bằng link
 router.post('/join-group', chatController.joinGroup);
 
+// Kiểm tra chat tồn tại
+router.get('/private-exists/:otherUserId', chatController.checkPrivateChatExists);
+
+// Tạo chat riêng tư
+router.post('/private-create', chatController.createPrivateChat);
+
 module.exports = router;

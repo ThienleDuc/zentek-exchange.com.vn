@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Search, Package, Shield, TrendingUp, Archive, Store, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, Package, Shield, TrendingUp, Archive, Store, ChevronDown, ChevronRight, Plus, Eye, Pencil } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, BarChart, Bar, CartesianGrid, XAxis, YAxis, LineChart, Line } from 'recharts';
 import api from '../../services/api';
 import { productAdminService } from '../../services/productAdmin.service';
+import productSellerService from '../../services/productSeller.service';
 import Pagination from '../../components/common/Pagination';
 import Select from '../../components/common/Select';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { isSeller } from '../../utils/role.utils';
+import { storage } from '../../utils/storage.utils';
+import ProductEditModal from '../../components/admin/ProductEditModal';
 
 export interface Product {
   MaSanPham: string;
@@ -19,6 +23,10 @@ export interface Product {
   TenCuaHang: string;
   TenDanhMuc: string;
   HinhAnh: string;
+  DanhMucId?: string;
+  FileMoTa?: string | null;
+  LinkSanPham?: string | null;
+  DaHetHang?: boolean | number;
 }
 
 export interface CategoryTree {
@@ -29,6 +37,7 @@ export interface CategoryTree {
 
 const ProductManagement = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -39,10 +48,16 @@ const ProductManagement = () => {
     RemovedProducts: 0,
   });
   const [growthData, setGrowthData] = useState([]);
+  const [topViewsData, setTopViewsData] = useState([]);
+  const [topSalesData, setTopSalesData] = useState([]);
+
+  // Role detection
+  const currentUser = storage.getUser();
+  const isSellerUser = isSeller(currentUser);
 
   // Filter & Pagination state
   const [page, setPage] = useState(1);
-  const [limit] = useState(10);
+  const [limit] = useState(5);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -54,6 +69,14 @@ const ProductManagement = () => {
   
   const [categories, setCategories] = useState<CategoryTree[]>([]);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+
+  // Seller Action States
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const [outOfStockProduct, setOutOfStockProduct] = useState<Product | null>(null);
+  const [inStockProduct, setInStockProduct] = useState<Product | null>(null);
+  const [inStockQty, setInStockQty] = useState<number>(10);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -80,12 +103,59 @@ const ProductManagement = () => {
     return '';
   };
 
+
+
+  const handleOutOfStockClick = (product: Product) => {
+    setOutOfStockProduct(product);
+  };
+
+  const handleConfirmOutOfStock = async () => {
+    if (!outOfStockProduct) return;
+    try {
+      const res = await productSellerService.setOutOfStock(outOfStockProduct.MaSanPham);
+      if (res.success) {
+        setOutOfStockProduct(null);
+        fetchProducts();
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Không thể xác nhận hết hàng.');
+    }
+  };
+
+  const handleInStockClick = (product: Product) => {
+    setInStockProduct(product);
+    setInStockQty(10); // default
+  };
+
+  const handleConfirmInStock = async () => {
+    if (!inStockProduct) return;
+    if (inStockQty <= 0) {
+      alert('Số lượng hàng phải lớn hơn 0.');
+      return;
+    }
+    try {
+      const res = await productSellerService.setInStock(inStockProduct.MaSanPham, inStockQty);
+      if (res.success) {
+        setInStockProduct(null);
+        fetchProducts();
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Không thể xác nhận còn hàng.');
+    }
+  };
+
   const fetchStats = async () => {
     try {
-      const data = await productAdminService.getStats(tuNgay, denNgay);
+      const data = isSellerUser
+        ? await productSellerService.getStats(tuNgay, denNgay)
+        : await productAdminService.getStats(tuNgay, denNgay);
       if (data.success) {
         setStats(data.data.overview);
         setGrowthData(data.data.growth);
+        if (isSellerUser) {
+          setTopViewsData(data.data.topViews || []);
+          setTopSalesData(data.data.topSales || []);
+        }
       }
     } catch (error) {
       console.error('Error fetching product stats:', error);
@@ -95,20 +165,55 @@ const ProductManagement = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const data = await productAdminService.getProducts({
-        page,
-        limit,
-        search,
-        trangThai: statusFilter,
-        tuNgay,
-        denNgay,
-        cuaHang: cuaHangFilter,
-        danhMuc: danhMucFilter,
-        tinhTrang: tinhTrangFilter
-      });
-      if (data.success) {
-        setProducts(data.data);
-        setTotalPages(data.pagination.totalPages);
+      if (isSellerUser) {
+        const res = await productSellerService.getProducts();
+        if (res.success) {
+          let filtered = res.data;
+          if (search) {
+            const searchLower = search.toLowerCase();
+            filtered = filtered.filter((p: any) => 
+              p.TieuDe.toLowerCase().includes(searchLower) || 
+              p.MaSanPham.toLowerCase().includes(searchLower)
+            );
+          }
+          if (statusFilter) {
+            filtered = filtered.filter((p: any) => p.TrangThaiDuyet === statusFilter);
+          }
+          if (tinhTrangFilter) {
+            filtered = filtered.filter((p: any) => p.TinhTrang === tinhTrangFilter);
+          }
+          if (danhMucFilter) {
+            filtered = filtered.filter((p: any) => p.DanhMucId === danhMucFilter);
+          }
+          if (tuNgay) {
+            const tuDate = new Date(tuNgay);
+            filtered = filtered.filter((p: any) => new Date(p.NgayDang) >= tuDate);
+          }
+          if (denNgay) {
+            const denDate = new Date(denNgay);
+            denDate.setHours(23, 59, 59, 999);
+            filtered = filtered.filter((p: any) => new Date(p.NgayDang) <= denDate);
+          }
+          
+          setProducts(filtered.slice((page - 1) * limit, page * limit));
+          setTotalPages(Math.ceil(filtered.length / limit) || 1);
+        }
+      } else {
+        const data = await productAdminService.getProducts({
+          page,
+          limit,
+          search,
+          trangThai: statusFilter,
+          tuNgay,
+          denNgay,
+          cuaHang: cuaHangFilter,
+          danhMuc: danhMucFilter,
+          tinhTrang: tinhTrangFilter
+        });
+        if (data.success) {
+          setProducts(data.data);
+          setTotalPages(data.pagination.totalPages);
+        }
       }
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -143,116 +248,200 @@ const ProductManagement = () => {
   };
 
   return (
-    <div className="product-management-page space-y-6">
+    <div className="product-management-page space-y-6 text-text-main">
       {/* Header */}
-      <h2 className="text-2xl font-bold text-text-main flex items-center gap-2">
-        <Package className="w-6 h-6 text-primary" /> Quản lý sản phẩm
-      </h2>
-
-      {/* Bộ lọc Date cho Dashboard */}
-      <div className="bg-surface backdrop-blur-md border border-border-default rounded-xl p-4 shadow-sm flex flex-wrap gap-4 items-end">
-        <div>
-          <label className="block text-sm text-text-muted mb-1">Từ ngày</label>
-          <input 
-            type="date" 
-            value={tuNgay} 
-            onChange={(e) => {setTuNgay(e.target.value); setPage(1);}}
-            className="px-3 py-2 bg-surface-muted border border-border-default rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none text-text-main"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-text-muted mb-1">Đến ngày</label>
-          <input 
-            type="date" 
-            value={denNgay} 
-            onChange={(e) => {setDenNgay(e.target.value); setPage(1);}}
-            className="px-3 py-2 bg-surface-muted border border-border-default rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none text-text-main"
-          />
-        </div>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-text-main flex items-center gap-2">
+          <Package className="w-6 h-6 text-primary" /> Quản lý sản phẩm
+        </h2>
+        {isSellerUser && (
+          <button
+            onClick={() => { setEditingProduct(null); setIsEditModalOpen(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors font-medium text-sm shadow-md"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Thêm sản phẩm</span>
+          </button>
+        )}
       </div>
+
+      {/* Date Filter */}
+      {true && (
+        <div className="bg-surface backdrop-blur-md border border-border-default rounded-xl p-4 shadow-sm flex flex-wrap gap-4 items-end">
+          <div>
+            <label className="block text-sm text-text-muted mb-1">Từ ngày</label>
+            <input 
+              type="date" 
+              value={tuNgay} 
+              onChange={(e) => {setTuNgay(e.target.value); setPage(1);}}
+              className="px-3 py-2 bg-surface-muted border border-border-default rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none text-text-main"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-text-muted mb-1">Đến ngày</label>
+            <input 
+              type="date" 
+              value={denNgay} 
+              onChange={(e) => {setDenNgay(e.target.value); setPage(1);}}
+              className="px-3 py-2 bg-surface-muted border border-border-default rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none text-text-main"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Dashboards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Tổng quan số lượng (Bar chart) */}
-        <div className="bg-surface border border-border-default rounded-xl p-4 shadow-sm lg:col-span-1">
-          <h3 className="text-sm font-semibold text-text-main mb-4 flex items-center gap-2">
-            <Archive className="w-4 h-4 text-primary" /> Tổng quan số lượng
-          </h3>
-          <div className="h-[220px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={[
-                { name: 'Tổng số', value: stats.TotalProducts, fill: '#3B82F6' },
-                { name: 'Chờ duyệt', value: stats.PendingProducts, fill: '#F59E0B' },
-                { name: 'Vi phạm', value: stats.RemovedProducts, fill: '#EF4444' }
-              ]}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                <RechartsTooltip cursor={{ fill: '#334155', opacity: 0.2 }} contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc' }} />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Trạng thái sản phẩm (Pie chart) */}
-        <div className="bg-surface border border-border-default rounded-xl p-4 shadow-sm lg:col-span-1">
-          <h3 className="text-sm font-semibold text-text-main mb-4 flex items-center gap-2">
-            <Shield className="w-4 h-4 text-primary" /> Trạng thái sản phẩm
-          </h3>
-          <div className="h-[220px] w-full">
-            {stats.TotalProducts > 0 ? (
+      {true && (
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${isSellerUser ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-6`}>
+          {/* Tổng quan số lượng (Bar chart) */}
+          <div className="bg-surface border border-border-default rounded-xl p-4 shadow-sm lg:col-span-1">
+            <h3 className="text-sm font-semibold text-text-main mb-4 flex items-center gap-2">
+              <Archive className="w-4 h-4 text-primary" /> Tổng quan số lượng
+            </h3>
+            <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: 'Chờ duyệt', value: stats.PendingProducts, color: '#F59E0B' },
-                      { name: 'Đã duyệt', value: stats.ApprovedProducts, color: '#10B981' },
-                      { name: 'Từ chối', value: stats.RejectedProducts, color: '#EF4444' },
-                      { name: 'Đã gỡ', value: stats.RemovedProducts, color: '#64748B' }
-                    ]}
-                    cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none"
-                  >
-                    {
-                      [
-                        { color: '#F59E0B' }, { color: '#10B981' }, { color: '#EF4444' }, { color: '#64748B' }
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))
-                    }
-                  </Pie>
-                  <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc' }} />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-sm text-text-muted">Chưa có dữ liệu</div>
-            )}
-          </div>
-        </div>
-
-        {/* Tăng trưởng (Line chart) */}
-        <div className="bg-surface border border-border-default rounded-xl p-4 shadow-sm lg:col-span-1">
-          <h3 className="text-sm font-semibold text-text-main mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-primary" /> Thống kê đăng mới
-          </h3>
-          <div className="h-[220px] w-full">
-            {growthData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={growthData}>
+                <BarChart data={[
+                  { name: 'Tổng số', value: stats.TotalProducts, fill: '#3B82F6' },
+                  { name: 'Chờ duyệt', value: stats.PendingProducts, fill: '#F59E0B' },
+                  { name: 'Vi phạm', value: stats.RemovedProducts, fill: '#EF4444' }
+                ]}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                  <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                  <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc' }} />
-                  <Line type="monotone" dataKey="count" stroke="#3B82F6" strokeWidth={3} dot={{ fill: '#3B82F6', r: 4 }} activeDot={{ r: 6 }} name="Số sản phẩm" />
-                </LineChart>
+                  <RechartsTooltip cursor={{ fill: '#334155', opacity: 0.2 }} contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc' }} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-sm text-text-muted">Chưa có dữ liệu</div>
-            )}
+            </div>
           </div>
+
+          {/* Trạng thái sản phẩm (Pie chart) */}
+          <div className="bg-surface border border-border-default rounded-xl p-4 shadow-sm lg:col-span-1">
+            <h3 className="text-sm font-semibold text-text-main mb-4 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-primary" /> Trạng thái sản phẩm
+            </h3>
+            <div className="h-[220px] w-full">
+              {stats.TotalProducts > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Chờ duyệt', value: stats.PendingProducts, color: '#F59E0B' },
+                        { name: 'Đã duyệt', value: stats.ApprovedProducts, color: '#10B981' },
+                        { name: 'Từ chối', value: stats.RejectedProducts, color: '#EF4444' },
+                        { name: 'Đã gỡ', value: stats.RemovedProducts, color: '#64748B' }
+                      ]}
+                      cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2} dataKey="value" stroke="none"
+                    >
+                      {
+                        [
+                          { color: '#F59E0B' }, { color: '#10B981' }, { color: '#EF4444' }, { color: '#64748B' }
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))
+                      }
+                    </Pie>
+                    <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc' }} />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-sm text-text-muted">Chưa có dữ liệu</div>
+              )}
+            </div>
+          </div>
+
+          {/* Cột 3: Tăng trưởng (Line chart) cho Admin OR Top sản phẩm bán chạy (Bar chart) cho Seller */}
+          {!isSellerUser ? (
+            <div className="bg-surface border border-border-default rounded-xl p-4 shadow-sm lg:col-span-1">
+              <h3 className="text-sm font-semibold text-text-main mb-4 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" /> Thống kê đăng mới
+              </h3>
+              <div className="h-[220px] w-full">
+                {growthData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={growthData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                      <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc' }} />
+                      <Line type="monotone" dataKey="count" stroke="#3B82F6" strokeWidth={3} dot={{ fill: '#3B82F6', r: 4 }} activeDot={{ r: 6 }} name="Số sản phẩm" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-sm text-text-muted">Chưa có dữ liệu</div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-surface border border-border-default rounded-xl p-4 shadow-sm lg:col-span-1">
+              <h3 className="text-sm font-semibold text-text-main mb-4 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-emerald-500" /> Top sản phẩm bán chạy
+              </h3>
+              <div className="h-[220px] w-full">
+                {topSalesData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topSalesData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                      <XAxis 
+                        dataKey="name" 
+                        stroke="#94a3b8" 
+                        fontSize={11} 
+                        tickLine={false} 
+                        axisLine={false} 
+                        tickFormatter={(value) => value.length > 10 ? value.substring(0, 10) + '...' : value}
+                      />
+                      <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <RechartsTooltip 
+                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc' }}
+                        formatter={(value: any) => [value, 'Đã bán']}
+                        labelFormatter={(label) => `Sản phẩm: ${label}`}
+                      />
+                      <Bar dataKey="value" fill="#10B981" radius={[4, 4, 0, 0]} name="Đã bán" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-sm text-text-muted">Chưa có dữ liệu</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Cột 4 (Seller Only): Top sản phẩm xem nhiều (Bar chart) */}
+          {isSellerUser && (
+            <div className="bg-surface border border-border-default rounded-xl p-4 shadow-sm lg:col-span-1">
+              <h3 className="text-sm font-semibold text-text-main mb-4 flex items-center gap-2">
+                <Eye className="w-4 h-4 text-cyan-500" /> Top sản phẩm xem nhiều
+              </h3>
+              <div className="h-[220px] w-full">
+                {topViewsData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topViewsData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                      <XAxis 
+                        dataKey="name" 
+                        stroke="#94a3b8" 
+                        fontSize={11} 
+                        tickLine={false} 
+                        axisLine={false} 
+                        tickFormatter={(value) => value.length > 10 ? value.substring(0, 10) + '...' : value}
+                      />
+                      <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <RechartsTooltip 
+                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', borderRadius: '0.5rem', color: '#f8fafc' }}
+                        formatter={(value: any) => [value, 'Lượt xem']}
+                        labelFormatter={(label) => `Sản phẩm: ${label}`}
+                      />
+                      <Bar dataKey="value" fill="#06B6D4" radius={[4, 4, 0, 0]} name="Lượt xem" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-sm text-text-muted">Chưa có dữ liệu</div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Bảng dữ liệu và Bộ lọc */}
       <div className="bg-surface border border-border-default rounded-xl p-6 shadow-sm flex flex-col gap-6 mt-2">
@@ -267,16 +456,21 @@ const ProductManagement = () => {
               className="w-full pl-9 pr-4 py-2 bg-surface-muted border border-border-default rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none text-text-main"
             />
           </div>
-          <div className="relative w-full md:w-56">
-            <Store className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Tìm theo tên cửa hàng..."
-              value={cuaHangFilter}
-              onChange={(e) => {setCuaHangFilter(e.target.value); setPage(1);}}
-              className="w-full pl-9 pr-4 py-2 bg-surface-muted border border-border-default rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none text-text-main"
-            />
-          </div>
+          
+          {/* Shop Name Filter (Admin Only) */}
+          {!isSellerUser && (
+            <div className="relative w-full md:w-56">
+              <Store className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Tìm theo tên cửa hàng..."
+                value={cuaHangFilter}
+                onChange={(e) => {setCuaHangFilter(e.target.value); setPage(1);}}
+                className="w-full pl-9 pr-4 py-2 bg-surface-muted border border-border-default rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none text-text-main"
+              />
+            </div>
+          )}
+
           <div className="w-full md:w-48">
             <Select
               options={[
@@ -367,7 +561,7 @@ const ProductManagement = () => {
               <thead className="bg-surface border-b border-border-default text-xs uppercase font-semibold text-text-muted">
                 <tr>
                   <th className="px-6 py-4 font-semibold">Sản phẩm</th>
-                  <th className="px-6 py-4 font-semibold">Cửa hàng</th>
+                  {!isSellerUser && <th className="px-6 py-4 font-semibold">Cửa hàng</th>}
                   <th className="px-6 py-4 font-semibold">Phân loại</th>
                   <th className="px-6 py-4 font-semibold">Giá & Kho</th>
                   <th className="px-6 py-4 font-semibold text-center">Trạng thái</th>
@@ -376,9 +570,9 @@ const ProductManagement = () => {
               </thead>
               <tbody className="divide-y divide-border-default">
                 {loading ? (
-                  <tr><td colSpan={6} className="px-6 py-8 text-center text-text-muted">Đang tải dữ liệu...</td></tr>
+                  <tr><td colSpan={isSellerUser ? 5 : 6} className="px-6 py-8 text-center text-text-muted">Đang tải dữ liệu...</td></tr>
                 ) : products.length === 0 ? (
-                  <tr><td colSpan={6} className="px-6 py-8 text-center text-text-muted">Không tìm thấy sản phẩm nào</td></tr>
+                  <tr><td colSpan={isSellerUser ? 5 : 6} className="px-6 py-8 text-center text-text-muted">Không tìm thấy sản phẩm nào</td></tr>
                 ) : (
                   products.map((p) => (
                     <tr key={p.MaSanPham} className="hover:bg-surface/50 transition-colors">
@@ -397,7 +591,7 @@ const ProductManagement = () => {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">{p.TenCuaHang}</td>
+                      {!isSellerUser && <td className="px-6 py-4">{p.TenCuaHang}</td>}
                       <td className="px-6 py-4">
                         <div className="font-medium">{p.TenDanhMuc}</div>
                         <div className="text-xs text-text-muted">Tình trạng: {p.TinhTrang}</div>
@@ -410,13 +604,51 @@ const ProductManagement = () => {
                         {getStatusBadge(p.TrangThaiDuyet)}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => navigate(`/admin/products/${p.MaSanPham}`)}
-                          className="px-3 py-1.5 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors border border-primary/20"
-                          title="Xem chi tiết"
-                        >
-                          XEM CHI TIẾT
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          {isSellerUser ? (
+                            <>
+                              <button
+                                onClick={() => navigate(`${location.pathname}/${p.MaSanPham}`)}
+                                className="p-2 text-primary hover:bg-primary/10 rounded-xl transition border border-primary/20 hover:border-primary/40 bg-primary/5"
+                                title="Xem chi tiết"
+                              >
+                                <Eye size={16} />
+                              </button>
+                              <button
+                                onClick={() => { setEditingProduct(p); setIsEditModalOpen(true); }}
+                                className="p-2 text-yellow-500 hover:bg-yellow-500/10 rounded-xl transition border border-yellow-500/20 hover:border-yellow-500/40 bg-yellow-500/5"
+                                title="Chỉnh sửa"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              {(p.DaHetHang === 1 || p.DaHetHang === true || p.SoLuong === 0) ? (
+                                <button
+                                  onClick={() => handleInStockClick(p)}
+                                  className="p-2 text-green-500 hover:bg-green-500/10 rounded-xl transition border border-green-500/20 hover:border-green-500/40 bg-green-500/5"
+                                  title="Xác nhận còn hàng"
+                                >
+                                  <Package size={16} />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleOutOfStockClick(p)}
+                                  className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition border border-red-500/20 hover:border-red-500/40 bg-red-500/5"
+                                  title="Xác nhận hết hàng"
+                                >
+                                  <Archive size={16} />
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => navigate(`${location.pathname}/${p.MaSanPham}`)}
+                              className="px-3 py-1.5 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors border border-primary/20"
+                              title="Xem chi tiết"
+                            >
+                              CHI TIẾT
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -433,6 +665,83 @@ const ProductManagement = () => {
         )}
       </div>
 
+      {/* Product Edit/Add Modal */}
+      <ProductEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => { setIsEditModalOpen(false); setEditingProduct(null); }}
+        product={editingProduct}
+        title={editingProduct ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
+        onSuccess={() => { setIsEditModalOpen(false); setEditingProduct(null); fetchProducts(); }}
+      />
+
+      {/* Out of Stock Confirm Modal */}
+      {isSellerUser && outOfStockProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-border-default rounded-2xl max-w-md w-full overflow-hidden shadow-2xl p-6 space-y-4 text-text-main animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="text-xl font-bold flex items-center gap-2 text-red-500">
+              <Archive size={22} />
+              <span>Xác nhận hết hàng?</span>
+            </h3>
+            <p className="text-text-muted text-sm leading-relaxed">
+              Bạn có chắc chắn muốn chuyển sản phẩm <strong className="text-text-main">"{outOfStockProduct.TieuDe}"</strong> sang trạng thái hết hàng?
+              Hành động này sẽ cập nhật số lượng tồn kho của sản phẩm về 0.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setOutOfStockProduct(null)}
+                className="px-4 py-2 bg-surface border border-border-default hover:bg-surface-muted text-text-body rounded-lg transition font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmOutOfStock}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition font-medium"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* In Stock Confirm Modal */}
+      {isSellerUser && inStockProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-border-default rounded-2xl max-w-md w-full overflow-hidden shadow-2xl p-6 space-y-4 text-text-main animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="text-xl font-bold flex items-center gap-2 text-green-500">
+              <Package size={22} />
+              <span>Xác nhận còn hàng?</span>
+            </h3>
+            <div className="space-y-2">
+              <p className="text-text-muted text-sm leading-relaxed">
+                Nhập số lượng hàng mới cho sản phẩm <strong className="text-text-main">"{inStockProduct.TieuDe}"</strong>:
+              </p>
+              <input
+                type="number"
+                min="1"
+                required
+                value={inStockQty}
+                onChange={e => setInStockQty(Number(e.target.value))}
+                className="w-full bg-surface border border-border-default focus:border-primary rounded-xl px-4 py-2.5 text-sm text-text-main outline-none transition focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => { setInStockProduct(null); setInStockQty(10); }}
+                className="px-4 py-2 bg-surface border border-border-default hover:bg-surface-muted text-text-body rounded-lg transition font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmInStock}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition font-medium"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -24,6 +24,13 @@ io.on('connection', (socket) => {
   });
 });
 
+const tempOrderCache = require('./src/utils/tempOrderCache');
+
+// Periodic cleanup of expired temporary orders every 10 minutes
+setInterval(() => {
+  tempOrderCache.cleanup();
+}, 10 * 60 * 1000);
+
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

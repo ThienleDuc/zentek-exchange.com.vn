@@ -259,6 +259,46 @@
   color: #7f8c8d;
 }
 
+.seller-profile-page .btn-save-image {
+  background-color: #27ae60;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+.seller-profile-page .btn-save-image:hover:not(:disabled) {
+  background-color: #219a52;
+}
+.seller-profile-page .btn-save-image:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.seller-profile-page .btn-cancel-image {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+.seller-profile-page .btn-cancel-image:hover:not(:disabled) {
+  background-color: #c0392b;
+}
+.seller-profile-page .btn-cancel-image:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .seller-profile-page {

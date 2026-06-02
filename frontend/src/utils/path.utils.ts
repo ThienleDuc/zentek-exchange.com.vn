@@ -16,7 +16,10 @@ export const PATHS = {
     ROOT: '/seller',
     DASHBOARD: '/seller/dashboard',
     SHOP: '/seller/cua-hang',
-    MESSAGES: '/seller/chat'
+    MESSAGES: '/seller/chat',
+    PRODUCTS: '/seller/san-pham',
+    ADD_PRODUCT: '/seller/san-pham/them',
+    PRODUCT_DETAIL: '/seller/san-pham/:id'
   },
   // Buyer
   Buyer: {
@@ -67,6 +70,9 @@ export const ROLE_ALLOWED_PATHS: Record<RoleNames, string[]> = {
     PATHS.Seller.DASHBOARD,
     PATHS.Seller.SHOP,
     PATHS.Seller.MESSAGES,
+    PATHS.Seller.PRODUCTS,
+    PATHS.Seller.ADD_PRODUCT,
+    PATHS.Seller.PRODUCT_DETAIL,
     PATHS.Buyer.ORDERS,
     PATHS.Buyer.DOI_MAT_KHAU,
     PATHS.Buyer.HOA_DON_BAN_HANG,

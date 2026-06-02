@@ -81,6 +81,72 @@ class ChatService {
 
     return { message: 'Tham gia nhóm thành công', groupId };
   }
+
+  async checkPrivateChatExists(userId, otherUserId) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('userId', sql.UniqueIdentifier, userId)
+      .input('otherUserId', sql.UniqueIdentifier, otherUserId)
+      .query(`
+        SELECT tv1.CuocTroChuyenId AS conversationId
+        FROM ThanhVienCuocTroChuyen tv1
+        JOIN ThanhVienCuocTroChuyen tv2 ON tv1.CuocTroChuyenId = tv2.CuocTroChuyenId
+        JOIN CuocTroChuyen c ON tv1.CuocTroChuyenId = c.MaCuocTroChuyen
+        WHERE c.Loai = 'ca_nhan'
+          AND tv1.NguoiDungId = @userId
+          AND tv2.NguoiDungId = @otherUserId
+      `);
+
+    if (result.recordset.length > 0) {
+      return { exists: true, conversationId: result.recordset[0].conversationId };
+    }
+    return { exists: false, conversationId: null };
+  }
+
+  async createPrivateChat(userId, otherUserId) {
+    const pool = await poolPromise;
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+
+    try {
+      // 1. Insert CuocTroChuyen
+      const chatRequest = new sql.Request(transaction);
+      const chatResult = await chatRequest
+        .query(`
+          INSERT INTO CuocTroChuyen (Loai, NgayTao, NgayCapNhat)
+          OUTPUT INSERTED.MaCuocTroChuyen
+          VALUES ('ca_nhan', GETDATE(), GETDATE())
+        `);
+
+      const conversationId = chatResult.recordset[0].MaCuocTroChuyen;
+
+      // 2. Add userId member
+      const member1Request = new sql.Request(transaction);
+      await member1Request
+        .input('conversationId', sql.UniqueIdentifier, conversationId)
+        .input('userId', sql.UniqueIdentifier, userId)
+        .query(`
+          INSERT INTO ThanhVienCuocTroChuyen (CuocTroChuyenId, NguoiDungId, VaiTro)
+          VALUES (@conversationId, @userId, 'thanh_vien')
+        `);
+
+      // 3. Add otherUserId member
+      const member2Request = new sql.Request(transaction);
+      await member2Request
+        .input('conversationId', sql.UniqueIdentifier, conversationId)
+        .input('otherUserId', sql.UniqueIdentifier, otherUserId)
+        .query(`
+          INSERT INTO ThanhVienCuocTroChuyen (CuocTroChuyenId, NguoiDungId, VaiTro)
+          VALUES (@conversationId, @otherUserId, 'thanh_vien')
+        `);
+
+      await transaction.commit();
+      return conversationId;
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  }
 }
 
 module.exports = new ChatService();

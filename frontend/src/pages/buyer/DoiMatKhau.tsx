@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PATHS } from '../../utils/path.utils';
+import { changePassword } from '../../services/auth.service';
+
+
+
 
 const DoiMatKhau: React.FC = () => {
   const navigate = useNavigate();
@@ -41,12 +45,11 @@ const DoiMatKhau: React.FC = () => {
     }
 
     // Mật khẩu mới
-    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!newPassword) {
       newErrors.newPassword = 'Vui lòng nhập mật khẩu mới';
       valid = false;
-    } else if (!passwordRegex.test(newPassword)) {
-      newErrors.newPassword = 'Mật khẩu phải có ít nhất 8 ký tự, 1 chữ hoa, 1 số và 1 ký tự đặc biệt';
+    } else if (newPassword.length < 6 || newPassword.length > 12) {
+      newErrors.newPassword = 'Mật khẩu phải từ 6 đến 12 ký tự';
       valid = false;
     }
 
@@ -60,42 +63,33 @@ const DoiMatKhau: React.FC = () => {
     return valid;
   };
 
-  // API giả lập đổi mật khẩu
-  const fakeChangePasswordAPI = (oldPass: string, newPass: string): Promise<{ success: boolean; message: string }> => {
-    // Ghi chú: Giả lập kiểm tra mật khẩu cũ đúng là "oldPass123"
-    console.log('[API Giả lập] Gửi yêu cầu đổi mật khẩu', { oldPass, newPass });
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (oldPass === 'oldPass123') {
-          resolve({ success: true, message: 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại.' });
-        } else {
-          resolve({ success: false, message: 'Mật khẩu cũ không chính xác' });
-        }
-      }, 1500);
-    });
-  };
-
   // Xử lý submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
     setIsLoading(true);
-    // Ghi chú tương tác: người dùng click nút Đổi mật khẩu
     console.log('[Tương tác] Người dùng gửi form đổi mật khẩu');
 
-    const result = await fakeChangePasswordAPI(oldPassword, newPassword);
-    setIsLoading(false);
+    try {
+      const result = await changePassword({ oldPassword, newPassword });
+      setIsLoading(false);
 
-    if (result.success) {
-      showToast(result.message, 'success');
-      // Mô phỏng đăng xuất và chuyển hướng sau 2 giây
-      setTimeout(() => {
-        console.log('[Tương tác] Chuyển về trang đăng nhập');
-        navigate(PATHS.AUTH.LOGIN);
-      }, 2000);
-    } else {
-      showToast(result.message, 'error');
+      if (result.success) {
+        showToast(result.message || 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại.', 'success');
+        // Clear auth data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setTimeout(() => {
+          console.log('[Tương tác] Chuyển về trang đăng nhập');
+          navigate(PATHS.AUTH.LOGIN);
+        }, 2000);
+      } else {
+        showToast(result.message || 'Mật khẩu cũ không chính xác', 'error');
+      }
+    } catch (err: any) {
+      setIsLoading(false);
+      showToast(err.message || 'Mật khẩu cũ không chính xác hoặc có lỗi xảy ra', 'error');
     }
   };
 
@@ -146,14 +140,14 @@ const DoiMatKhau: React.FC = () => {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   onBlur={() => validate()}
-                  placeholder="Ít nhất 8 ký tự, chữ hoa, số, ký tự đặc biệt"
+                  placeholder="Từ 6 đến 12 ký tự"
                 />
                 <button type="button" className="toggle-password" onClick={() => toggleShowPassword('new')}>
                   {showPassword.new ? '🙈' : '👁️'}
                 </button>
               </div>
               {errors.newPassword && <span className="error-message">{errors.newPassword}</span>}
-              <div className="password-hint">Yêu cầu: tối thiểu 8 ký tự, 1 chữ hoa, 1 số, 1 ký tự đặc biệt</div>
+              <div className="password-hint">Yêu cầu: từ 6 đến 12 ký tự</div>
             </div>
 
             {/* Xác nhận mật khẩu mới */}

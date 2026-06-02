@@ -1,18 +1,27 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { Clock, Truck, CheckCircle, XCircle, Package, ChevronRight, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Clock, Truck, CheckCircle, XCircle, Package, ChevronRight, Search, ClipboardList } from 'lucide-react';
 import { PATHS } from '../../utils/path.utils';
 import { getUserFromStorage, isBuyer, isSeller } from '../../utils/role.utils';
+import { orderAdminService, type OrderDetailItem } from '../../services/orderAdmin.service';
+import { chatClientService } from '../../services/chatClient.service';
+import { cartService } from '../../services/cart.service';
+import ReviewModal from '../../components/buyer/ReviewModal';
+import PaginationProduct from '../../components/common/PaginationProduct';
 
 // Định nghĩa kiểu dữ liệu
 interface OrderItem {
   maSanPham: string;
   tenSanPham: string;
   anh: string;
-  phanLoai?: string;
+  phanLoaiId?: string | null;
+  phanLoai?: string | null;
   soLuong: number;
   donGia: number;
   thanhTien: number;
+  sellerId?: string;
+  shopId?: string;
+  tenCuaHang?: string;
 }
 
 interface Order {
@@ -27,107 +36,6 @@ interface Order {
   daTraLoi?: boolean;        // Seller: đã trả lời đánh giá chưa
 }
 
-// Mock dữ liệu đơn hàng (có gắn shopId và buyerId)
-// Mock dữ liệu đơn hàng mở rộng cho cả Buyer (buyer-001) và Seller (shop-001)
-const mockOrders: Order[] = [
-  // ========== ĐƠN CỦA SHOP-001 (seller hiện tại) ==========
-  {
-    maDonHang: 'DH001',
-    ngayTao: '2025-03-20T10:30:00Z',
-    trangThai: 'Chờ xử lý',
-    tongTien: 450000,
-    shopId: 'shop-001',
-    buyerId: 'buyer-001',
-    items: [
-      { maSanPham: 'SP1', tenSanPham: 'Áo thun nam', anh: 'https://picsum.photos/id/1/100/100', phanLoai: 'M, Đen', soLuong: 2, donGia: 150000, thanhTien: 300000 },
-      { maSanPham: 'SP2', tenSanPham: 'Quần jeans', anh: 'https://picsum.photos/id/2/100/100', phanLoai: 'L, Xanh', soLuong: 1, donGia: 150000, thanhTien: 150000 },
-    ]
-  },
-  {
-    maDonHang: 'DH002',
-    ngayTao: '2025-03-18T14:20:00Z',
-    trangThai: 'Đang giao',
-    tongTien: 890000,
-    shopId: 'shop-001',
-    buyerId: 'buyer-001',
-    items: [
-      { maSanPham: 'SP3', tenSanPham: 'Giày thể thao', anh: 'https://picsum.photos/id/3/100/100', phanLoai: 'Size 42', soLuong: 1, donGia: 890000, thanhTien: 890000 }
-    ]
-  },
-  {
-    maDonHang: 'DH003',
-    ngayTao: '2025-03-15T09:00:00Z',
-    trangThai: 'Đã nhận',
-    tongTien: 250000,
-    shopId: 'shop-001',
-    buyerId: 'buyer-001',
-    items: [
-      { maSanPham: 'SP4', tenSanPham: 'Mũ lưỡi trai', anh: 'https://picsum.photos/id/4/100/100', soLuong: 2, donGia: 125000, thanhTien: 250000 }
-    ],
-    daDanhGia: false,    // Buyer chưa đánh giá
-    daTraLoi: false      // Seller chưa trả lời
-  },
-  {
-    maDonHang: 'DH005',
-    ngayTao: '2025-03-22T08:00:00Z',
-    trangThai: 'Đã hủy',
-    tongTien: 320000,
-    shopId: 'shop-001',
-    buyerId: 'buyer-001',
-    items: [
-      { maSanPham: 'SP6', tenSanPham: 'Áo sơ mi', anh: 'https://picsum.photos/id/6/100/100', soLuong: 1, donGia: 320000, thanhTien: 320000 }
-    ]
-  },
-  {
-    maDonHang: 'DH006',
-    ngayTao: '2025-03-25T11:15:00Z',
-    trangThai: 'Đã nhận',
-    tongTien: 540000,
-    shopId: 'shop-001',
-    buyerId: 'buyer-002',   // Buyer khác, nhưng vẫn thuộc shop-001
-    items: [
-      { maSanPham: 'SP7', tenSanPham: 'Váy hoa', anh: 'https://picsum.photos/id/7/100/100', soLuong: 1, donGia: 540000, thanhTien: 540000 }
-    ],
-    daDanhGia: true,     // Đã đánh giá
-    daTraLoi: false      // Seller chưa trả lời
-  },
-  {
-    maDonHang: 'DH007',
-    ngayTao: '2025-03-26T09:30:00Z',
-    trangThai: 'Chờ xử lý',
-    tongTien: 210000,
-    shopId: 'shop-001',
-    buyerId: 'buyer-003',
-    items: [
-      { maSanPham: 'SP8', tenSanPham: 'Quần short', anh: 'https://picsum.photos/id/8/100/100', soLuong: 3, donGia: 70000, thanhTien: 210000 }
-    ]
-  },
-
-  // ========== ĐƠN CỦA SHOP KHÁC (không thuộc seller hiện tại, chỉ để test lọc) ==========
-  {
-    maDonHang: 'DH004',
-    ngayTao: '2025-03-10T16:45:00Z',
-    trangThai: 'Đã hủy',
-    tongTien: 120000,
-    shopId: 'shop-002',
-    buyerId: 'buyer-001',  // Buyer-001 mua từ shop khác -> không hiển thị với seller shop-001, nhưng buyer-001 vẫn thấy
-    items: [
-      { maSanPham: 'SP5', tenSanPham: 'Balo', anh: 'https://picsum.photos/id/5/100/100', soLuong: 1, donGia: 120000, thanhTien: 120000 }
-    ]
-  },
-  {
-    maDonHang: 'DH008',
-    ngayTao: '2025-03-27T14:00:00Z',
-    trangThai: 'Đang giao',
-    tongTien: 999000,
-    shopId: 'shop-003',
-    buyerId: 'buyer-001',
-    items: [
-      { maSanPham: 'SP9', tenSanPham: 'Điện thoại', anh: 'https://picsum.photos/id/9/100/100', soLuong: 1, donGia: 999000, thanhTien: 999000 }
-    ]
-  }
-];
-
 // Component hiển thị badge trạng thái
 const StatusBadge: React.FC<{ status: Order['trangThai'] }> = ({ status }) => {
   const config = {
@@ -136,7 +44,8 @@ const StatusBadge: React.FC<{ status: Order['trangThai'] }> = ({ status }) => {
     'Đã nhận': { color: 'bg-green-100 text-green-800', icon: CheckCircle },
     'Đã hủy': { color: 'bg-red-100 text-red-800', icon: XCircle },
   };
-  const { color, icon: Icon } = config[status];
+  const state = config[status] || { color: 'bg-gray-100 text-gray-800', icon: Clock };
+  const { color, icon: Icon } = state;
   return (
     <span className={`don-mua__status-badge ${color}`}>
       <Icon size={14} /> {status}
@@ -194,7 +103,6 @@ const OrderCard: React.FC<{ order: Order; role: 'buyer' | 'seller'; onAction: (a
         case 'Đang giao':
           return (
             <>
-              {/* Seller không có nút "Đã nhận" - chỉ buyer mới có */}
               <button onClick={() => onAction('contactBuyer', order.maDonHang)} className="don-mua__btn don-mua__btn--secondary">Liên hệ người mua</button>
             </>
           );
@@ -204,7 +112,6 @@ const OrderCard: React.FC<{ order: Order; role: 'buyer' | 'seller'; onAction: (a
               {!order.daTraLoi && (
                 <button onClick={() => onAction('replyReview', order.maDonHang)} className="don-mua__btn don-mua__btn--primary">Trả lời đánh giá</button>
               )}
-              {/* Không có nút Mua lại cho seller */}
             </>
           );
         case 'Đã hủy':
@@ -228,7 +135,7 @@ const OrderCard: React.FC<{ order: Order; role: 'buyer' | 'seller'; onAction: (a
       <div className="don-mua__items">
         {order.items.slice(0, 2).map((item, idx) => (
           <div key={idx} className="don-mua__item">
-            <img src={item.anh} alt={item.tenSanPham} className="don-mua__item-img" />
+            <img src={item.anh || 'https://picsum.photos/id/1/100/100'} alt={item.tenSanPham} className="don-mua__item-img" />
             <div className="don-mua__item-details">
               <div className="don-mua__item-name">{item.tenSanPham}</div>
               {item.phanLoai && <div className="don-mua__item-variant">Phân loại: {item.phanLoai}</div>}
@@ -257,100 +164,234 @@ const OrderCard: React.FC<{ order: Order; role: 'buyer' | 'seller'; onAction: (a
 };
 
 const DonMua: React.FC = () => {
+  const navigate = useNavigate();
   const user = getUserFromStorage();
   const role = user ? (isBuyer(user) ? 'buyer' : isSeller(user) ? 'seller' : null) : null;
   const [activeTab, setActiveTab] = useState<string>('Tất cả');
   const [searchKeyword, setSearchKeyword] = useState<string>('');
+  const [debouncedSearchKeyword, setDebouncedSearchKeyword] = useState<string>('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Pagination States
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+
+  // Review Modal States
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewOrderId, setReviewOrderId] = useState<string>('');
+  const [reviewItems, setReviewItems] = useState<OrderDetailItem[]>([]);
+
+  // Cancellation Modal States
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [isSubmittingCancel, setIsSubmittingCancel] = useState(false);
 
   // Các tab hiển thị tùy theo role
   const buyerTabs = ['Tất cả', 'Chờ xử lý', 'Đang giao', 'Đã nhận', 'Đã hủy'];
   const sellerTabs = ['Tất cả', 'Chờ xử lý', 'Đang giao', 'Đã hủy']; // Seller không có tab "Đã nhận"
   const tabs = role === 'buyer' ? buyerTabs : (role === 'seller' ? sellerTabs : []);
 
-  // Giả lập gọi API lấy đơn hàng theo role và user
+  // Gọi API lấy đơn hàng thực tế
   const fetchOrders = async () => {
+    if (!role) return;
     setLoading(true);
-    console.log(`[API Giả lập] GET /api/orders?role=${role}&userId=${user?.id}`);
-    await new Promise(resolve => setTimeout(resolve, 800));
-    let filtered = [...mockOrders];
-    if (role === 'buyer') {
-      filtered = filtered.filter(order => order.buyerId === user?.id);
-    } else if (role === 'seller') {
-      // Giả định seller hiện tại có shopId = 'shop-001'
-      const currentShopId = 'shop-001'; // Trong thực tế lấy từ context hoặc API
-      filtered = filtered.filter(order => order.shopId === currentShopId);
+    try {
+      const res = await orderAdminService.getOrders(role, currentPage, 5, activeTab, debouncedSearchKeyword);
+      if (res.success) {
+        const mappedOrders: Order[] = res.data.map((order: any) => ({
+          maDonHang: order.maDonHang,
+          ngayTao: order.ngayTao,
+          trangThai: order.trangThai,
+          tongTien: order.tongTien,
+          daDanhGia: order.daDanhGia,
+          shopId: order.shopId,
+          buyerId: order.buyerId,
+          items: order.items.map((item: any) => ({
+            maSanPham: item.maSanPham,
+            tenSanPham: item.tenSanPham,
+            anh: item.anh,
+            phanLoaiId: item.phanLoaiId,
+            phanLoai: item.phanLoai,
+            soLuong: item.soLuong,
+            donGia: item.donGia,
+            thanhTien: item.thanhTien,
+            sellerId: item.sellerId,
+            shopId: item.shopId,
+            tenCuaHang: item.tenCuaHang
+          }))
+        }));
+        setOrders(mappedOrders);
+        if (res.pagination) {
+          setTotalPages(res.pagination.totalPages);
+        }
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải danh sách đơn hàng:', error);
+    } finally {
+      setLoading(false);
     }
-    setOrders(filtered);
-    setLoading(false);
+  };
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchKeyword(searchKeyword);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchKeyword]);
+
+  // Tab change resets page
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setCurrentPage(1);
   };
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [currentPage, activeTab, debouncedSearchKeyword]);
 
-  // Lọc theo tab trạng thái + từ khóa tìm kiếm
-  const filteredOrders = useMemo(() => {
-    let result = [...orders];
-    if (activeTab !== 'Tất cả') {
-      result = result.filter(o => o.trangThai === activeTab);
-    }
-    if (searchKeyword.trim()) {
-      const keyword = searchKeyword.trim().toLowerCase();
-      result = result.filter(order => 
-        order.maDonHang.toLowerCase().includes(keyword) ||
-        order.items.some(item => item.tenSanPham.toLowerCase().includes(keyword))
-      );
-    }
-    return result;
-  }, [orders, activeTab, searchKeyword]);
+  const filteredOrders = orders;
 
-  const handleAction = (action: string, orderId: string) => {
-    console.log(`[Tương tác] ${action} trên đơn hàng ${orderId} với role ${role}`);
+  const handleAction = async (action: string, orderId: string) => {
     const order = orders.find(o => o.maDonHang === orderId);
     if (!order) return;
 
     switch (action) {
       case 'cancel':
-        if (window.confirm('Bạn có chắc muốn hủy đơn hàng này?')) {
-          console.log(`[API Giả lập] PUT /api/orders/${orderId}/cancel`);
-          alert(`Đã hủy đơn hàng ${orderId} (demo)`);
-          fetchOrders();
-        }
+        setCancelOrderId(orderId);
+        setCancelReason('');
+        setIsCancelModalOpen(true);
         break;
+
       case 'received':
-        if (window.confirm('Xác nhận đã nhận hàng?')) {
-          console.log(`[API Giả lập] PUT /api/orders/${orderId}/confirm-received`);
-          alert(`Đã xác nhận nhận hàng cho đơn ${orderId}`);
-          fetchOrders();
+        if (window.confirm('Bạn có chắc chắn xác nhận đã nhận được hàng?')) {
+          try {
+            const res = await orderAdminService.confirmReceived(orderId);
+            if (res.success) {
+              alert('Xác nhận đã nhận hàng thành công.');
+              fetchOrders();
+            }
+          } catch (err: any) {
+            alert(err.response?.data?.message || err.message || 'Lỗi khi xác nhận đã nhận hàng.');
+          }
         }
         break;
-      case 'buyAgain':
-        console.log(`[API Giả lập] POST /api/cart/add-multiple from order ${orderId}`);
-        alert(`Đã thêm sản phẩm của đơn ${orderId} vào giỏ hàng (demo)`);
-        break;
-      case 'review':
-        alert(`Chuyển đến trang đánh giá cho đơn ${orderId}`);
-        break;
-      case 'contact':
-        alert(`Mở chat với người bán cho đơn ${orderId}`);
-        break;
+
       case 'confirmShip':
-        if (window.confirm('Xác nhận giao đơn hàng này?')) {
-          console.log(`[API Giả lập] PUT /api/orders/${orderId}/confirm-ship`);
-          alert(`Đã xác nhận giao hàng cho đơn ${orderId}`);
-          fetchOrders();
+        if (window.confirm('Xác nhận giao đơn hàng này cho bên vận chuyển?')) {
+          try {
+            const res = await orderAdminService.confirmShipment(orderId);
+            if (res.success) {
+              alert('Xác nhận giao hàng thành công.');
+              fetchOrders();
+            }
+          } catch (err: any) {
+            alert(err.response?.data?.message || err.message || 'Lỗi khi xác nhận giao hàng.');
+          }
         }
         break;
-      case 'replyReview':
-        alert(`Mở form trả lời đánh giá cho đơn ${orderId}`);
+
+      case 'buyAgain':
+        try {
+          setLoading(true);
+          // Thêm tuần tự tất cả sản phẩm của đơn hàng vào giỏ hàng
+          for (const item of order.items) {
+            await cartService.addToCart(item.maSanPham, item.soLuong, item.phanLoaiId || undefined);
+          }
+          alert('Đã thêm sản phẩm của đơn hàng vào giỏ hàng.');
+          navigate(PATHS.Buyer.CART);
+        } catch (err: any) {
+          alert(err.response?.data?.message || err.message || 'Lỗi khi mua lại sản phẩm.');
+        } finally {
+          setLoading(false);
+        }
         break;
+
+      case 'contact':
       case 'contactBuyer':
-        alert(`Mở chat với người mua cho đơn ${orderId}`);
+        try {
+          setLoading(true);
+          const otherUserId = role === 'buyer' ? order.items[0]?.sellerId : order.buyerId;
+          if (!otherUserId) {
+            alert('Không tìm thấy thông tin đối tác chat.');
+            return;
+          }
+
+          // Kiểm tra và tạo phòng chat riêng tư
+          const checkRes = await chatClientService.checkPrivateChatExists(otherUserId);
+          let conversationId = checkRes.data.conversationId;
+
+          if (!checkRes.data.exists || !conversationId) {
+            const createRes = await chatClientService.createPrivateChat(otherUserId);
+            conversationId = createRes.data.conversationId;
+          }
+
+          if (conversationId) {
+            if (role === 'buyer') {
+              navigate(`${PATHS.Buyer.MESSAGES}?chatId=${conversationId}`);
+            } else {
+              navigate(`${PATHS.Seller.MESSAGES}?chatId=${conversationId}`);
+            }
+          } else {
+            alert('Không thể tạo phòng chat.');
+          }
+        } catch (err: any) {
+          alert(err.response?.data?.message || err.message || 'Lỗi khi kết nối chat.');
+        } finally {
+          setLoading(false);
+        }
         break;
+
+      case 'review':
+        try {
+          setLoading(true);
+          const res = await orderAdminService.getOrderDetails(orderId);
+          if (res.success && res.data) {
+            setReviewItems(res.data.items);
+            setReviewOrderId(orderId);
+            setIsReviewModalOpen(true);
+          }
+        } catch (err: any) {
+          alert(err.response?.data?.message || err.message || 'Lỗi khi tải chi tiết đơn hàng để đánh giá.');
+        } finally {
+          setLoading(false);
+        }
+        break;
+
+      case 'replyReview':
+        alert(`Chức năng trả lời đánh giá đơn hàng ${orderId} sẽ sớm được cập nhật.`);
+        break;
+
       default:
         break;
+    }
+  };
+
+  const handleCancelSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancelOrderId) return;
+    if (!cancelReason.trim()) {
+      alert('Vui lòng nhập lý do hủy đơn.');
+      return;
+    }
+
+    setIsSubmittingCancel(true);
+    try {
+      const res = await orderAdminService.cancelOrder(cancelOrderId, cancelReason);
+      if (res.success) {
+        alert('Hủy đơn hàng thành công.');
+        setIsCancelModalOpen(false);
+        setCancelOrderId(null);
+        setCancelReason('');
+        fetchOrders();
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || err.message || 'Lỗi khi hủy đơn hàng.');
+    } finally {
+      setIsSubmittingCancel(false);
     }
   };
 
@@ -359,8 +400,15 @@ const DonMua: React.FC = () => {
   }
 
   return (
-    <div className="don-mua-page">
+    <div className={`don-mua-page ${role === 'seller' ? 'don-mua-page--seller' : ''}`}>
       <div className="don-mua-container">
+        {role === 'seller' && (
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-text-main flex items-center gap-2">
+              <ClipboardList className="w-6 h-6 text-primary" /> Quản lý đơn hàng
+            </h2>
+          </div>
+        )}
         {/* Thanh tìm kiếm */}
         <div className="don-mua__search-wrapper">
           <div className="don-mua__search-box">
@@ -386,7 +434,7 @@ const DonMua: React.FC = () => {
             <button
               key={tab}
               className={`don-mua-tab ${activeTab === tab ? 'don-mua-tab--active' : ''}`}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChange(tab)}
             >
               {tab}
             </button>
@@ -410,13 +458,77 @@ const DonMua: React.FC = () => {
             <p>Không tìm thấy đơn hàng nào</p>
           </div>
         ) : (
-          <div className="don-mua-list">
-            {filteredOrders.map(order => (
-              <OrderCard key={order.maDonHang} order={order} role={role as 'buyer' | 'seller'} onAction={handleAction} />
-            ))}
-          </div>
+          <>
+            <div className="don-mua-list">
+              {filteredOrders.map(order => (
+                <OrderCard key={order.maDonHang} order={order} role={role as 'buyer' | 'seller'} onAction={handleAction} />
+              ))}
+            </div>
+            <PaginationProduct
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => setCurrentPage(page)}
+            />
+          </>
         )}
       </div>
+
+      {/* cancellation Reason Modal Overlay */}
+      {isCancelModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-header">
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Hủy Đơn Hàng</h3>
+              <button className="modal-close-btn" onClick={() => setIsCancelModalOpen(false)}>✕</button>
+            </div>
+            <form onSubmit={handleCancelSubmit}>
+              <div className="modal-body">
+                <p style={{ marginBottom: '12px', fontSize: '0.95rem', color: '#555' }}>
+                  Vui lòng nhập lý do bạn muốn hủy đơn hàng <strong>#{cancelOrderId}</strong>:
+                </p>
+                <textarea
+                  className="modal-textarea"
+                  placeholder="Nhập lý do hủy đơn (ví dụ: Thay đổi ý định, Nhập sai địa chỉ, Muốn chọn sản phẩm khác...)"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  disabled={isSubmittingCancel}
+                  required
+                />
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="modal-btn modal-btn--cancel"
+                  onClick={() => setIsCancelModalOpen(false)}
+                  disabled={isSubmittingCancel}
+                >
+                  Đóng
+                </button>
+                <button
+                  type="submit"
+                  className="modal-btn modal-btn--submit"
+                  disabled={isSubmittingCancel}
+                >
+                  {isSubmittingCancel ? 'Đang xử lý...' : 'Xác nhận hủy'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Rich Media Review Modal */}
+      <ReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        orderId={reviewOrderId}
+        items={reviewItems}
+        onSuccess={(firstProductId) => {
+          fetchOrders();
+          if (firstProductId) {
+            navigate(PATHS.PUPLIC.PRODUCT_DETAIL.replace(':id', firstProductId));
+          }
+        }}
+      />
     </div>
   );
 };

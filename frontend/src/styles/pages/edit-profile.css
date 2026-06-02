@@ -192,6 +192,16 @@
   .avatar-btn.remove:hover {
     background-color: var(--border);
   }
+  .avatar-btn.save {
+    background-color: var(--secondary);
+    color: white;
+  }
+  .avatar-btn.save:hover {
+    background-color: var(--secondary-hover);
+  }
+  .avatar-btn.cancel:hover {
+    background-color: var(--border);
+  }
   .avatar-note {
     margin-top: 0.75rem;
     font-size: 0.7rem;

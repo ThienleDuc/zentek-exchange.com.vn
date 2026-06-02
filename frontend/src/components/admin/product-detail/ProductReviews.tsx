@@ -1,13 +1,44 @@
 import React, { useState } from 'react';
-import { Star } from 'lucide-react';
+import { Star, X } from 'lucide-react';
 import type { ProductDetailType } from '../../../pages/admin/ProductDetail';
+import productSellerService from '../../../services/productSeller.service';
 
 interface ProductReviewsProps {
   product: ProductDetailType;
+  currentUserId?: string;
+  role?: 'admin' | 'seller' | 'buyer';
+  onRefresh?: () => void;
 }
 
-const ProductReviews: React.FC<ProductReviewsProps> = ({ product }) => {
+const ProductReviews: React.FC<ProductReviewsProps> = ({ product, currentUserId, role = 'buyer', onRefresh }) => {
   const [filterStar, setFilterStar] = useState<number | null>(null);
+  const [replyingReview, setReplyingReview] = useState<any | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [submittingReply, setSubmittingReply] = useState(false);
+
+  const handleOpenReply = (review: any) => {
+    setReplyingReview(review);
+    setReplyText(review.TraLoiNoiDung || '');
+  };
+
+  const handleReplySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyingReview || !replyText.trim()) return;
+
+    try {
+      setSubmittingReply(true);
+      const res = await productSellerService.replyReview(replyingReview.MaDanhGia, replyText);
+      if (res.success) {
+        setReplyingReview(null);
+        setReplyText('');
+        if (onRefresh) onRefresh();
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi gửi trả lời.');
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
 
   const totalReviews = product.reviews?.length || 0;
   
@@ -19,6 +50,16 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ product }) => {
   const filteredReviews = filterStar === null 
     ? product.reviews 
     : product.reviews?.filter(r => r.SoSao === filterStar);
+
+  const sortedReviews = filteredReviews ? [...filteredReviews].sort((a, b) => {
+    if (currentUserId) {
+      const aIsCurrentUser = a.NguoiMuaId?.toLowerCase() === currentUserId.toLowerCase();
+      const bIsCurrentUser = b.NguoiMuaId?.toLowerCase() === currentUserId.toLowerCase();
+      if (aIsCurrentUser && !bIsCurrentUser) return -1;
+      if (!aIsCurrentUser && bIsCurrentUser) return 1;
+    }
+    return new Date(b.NgayTao).getTime() - new Date(a.NgayTao).getTime();
+  }) : [];
 
   const filterOptions = [
     { label: 'Tất cả', value: null },
@@ -95,9 +136,9 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ product }) => {
         )}
 
         {product.reviews && product.reviews.length > 0 ? (
-          filteredReviews && filteredReviews.length > 0 ? (
+          sortedReviews && sortedReviews.length > 0 ? (
             <div className="space-y-6">
-              {filteredReviews.map(r => (
+              {sortedReviews.map(r => (
                 <div key={r.MaDanhGia} className="border-b border-border-default pb-6 last:border-0 last:pb-0">
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">{r.TenNguoiMua?.charAt(0)}</div>
@@ -108,18 +149,48 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ product }) => {
                       </div>
                       <p className="text-sm text-text-main mb-2 leading-relaxed">{r.NoiDung}</p>
                       
-                      {r.media && r.media.length > 0 && (
-                        <div className="flex gap-2 mt-3">
-                          {r.media.map((m: any) => m.LoaiMedia === 'anh' ? (
+                      {((r.media && r.media.length > 0) || r.DuongDanVideo) && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {r.DuongDanVideo && (
+                            <video
+                              src={r.DuongDanVideo}
+                              controls
+                              className="w-16 h-16 rounded border border-border-default object-cover animate-in fade-in"
+                            />
+                          )}
+                          {r.media && r.media.map((m: any) => m.LoaiMedia === 'video' ? (
+                            <video key={m.MaPhanHoi} src={m.DuongDanMedia} controls className="w-16 h-16 rounded border border-border-default object-cover" />
+                          ) : (
                             <img key={m.MaPhanHoi} src={m.DuongDanMedia} alt="Review" className="w-16 h-16 rounded object-cover border border-border-default cursor-pointer hover:border-primary" />
-                          ) : null)}
+                          ))}
                         </div>
                       )}
                       
                       {r.TraLoiNoiDung && (
                         <div className="mt-4 bg-surface-muted border border-border-default p-4 rounded-lg text-sm relative before:absolute before:-top-2 before:left-6 before:w-4 before:h-4 before:bg-surface-muted before:border-l before:border-t before:border-border-default before:rotate-45">
-                          <div className="font-semibold text-text-main mb-1">Phản hồi của Người bán:</div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-semibold text-text-main">Phản hồi của Người bán:</span>
+                            {role === 'seller' && (
+                              <button
+                                onClick={() => handleOpenReply(r)}
+                                className="text-xs text-primary hover:underline font-medium"
+                              >
+                                Chỉnh sửa
+                              </button>
+                            )}
+                          </div>
                           <p className="text-text-muted">{r.TraLoiNoiDung}</p>
+                        </div>
+                      )}
+
+                      {!r.TraLoiNoiDung && role === 'seller' && (
+                        <div className="mt-3">
+                          <button
+                            onClick={() => handleOpenReply(r)}
+                            className="text-xs px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 rounded-lg transition font-medium"
+                          >
+                            Phản hồi
+                          </button>
                         </div>
                       )}
                     </div>
@@ -138,6 +209,62 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ product }) => {
           </div>
         )}
       </div>
+
+      {/* Reply Modal */}
+      {replyingReview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-border-default rounded-2xl max-w-md w-full overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200 text-text-main">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b border-border-default bg-surface-muted">
+              <h3 className="text-lg font-bold text-text-main">Trả lời đánh giá</h3>
+              <button
+                onClick={() => setReplyingReview(null)}
+                className="text-text-muted hover:text-text-main transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleReplySubmit} className="p-6 space-y-4">
+              <div>
+                <p className="text-xs text-text-muted mb-1">Người đánh giá: {replyingReview.TenNguoiMua}</p>
+                <div className="bg-surface-muted p-3 rounded-xl border border-border-default text-sm text-text-muted italic mb-4">
+                  "{replyingReview.NoiDung || 'Không để lại nội dung.'}"
+                </div>
+                
+                <label className="block text-sm font-medium text-text-body mb-1">Câu trả lời phản hồi *</label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Nhập nội dung phản hồi khách hàng..."
+                  value={replyText}
+                  onChange={e => setReplyText(e.target.value)}
+                  className="w-full bg-surface border border-border-default focus:border-primary rounded-xl px-4 py-2.5 text-text-main outline-none transition text-sm resize-none"
+                />
+              </div>
+
+              {/* Form Footer */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-border-default">
+                <button
+                  type="button"
+                  onClick={() => setReplyingReview(null)}
+                  className="px-4 py-2 bg-surface border border-border-default hover:bg-surface-muted text-text-body rounded-lg transition font-medium"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReply}
+                  className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition font-medium disabled:opacity-50"
+                >
+                  {submittingReply ? 'Đang gửi...' : 'Gửi phản hồi'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

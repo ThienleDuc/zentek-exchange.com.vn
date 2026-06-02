@@ -284,6 +284,122 @@ class UserRepository {
       throw error;
     }
   }
+
+  /**
+   * Lấy người dùng theo ID
+   */
+  async getUserById(userId) {
+    try {
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('Id', sql.UniqueIdentifier, userId)
+        .query(`
+          SELECT 
+            nd.MaNguoiDung, 
+            nd.TenDangNhap, 
+            nd.Email, 
+            nd.HoTen, 
+            nd.SoDienThoai, 
+            nd.AnhDaiDien, 
+            nd.NgayTao, 
+            nd.NgayCapNhat, 
+            vt.TenVaiTro AS roleName
+          FROM NguoiDung nd
+          INNER JOIN VaiTro vt ON nd.VaiTroId = vt.MaVaiTro
+          WHERE nd.MaNguoiDung = @Id AND nd.DaXoa = 0
+        `);
+      return result.recordset[0] || null;
+    } catch (error) {
+      console.error('Error in UserRepository.getUserById:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cập nhật thông tin profile người dùng
+   */
+  async updateUserProfile(userId, { fullName, phone, email, avatarUrl }) {
+    try {
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('Id', sql.UniqueIdentifier, userId)
+        .input('HoTen', sql.NVarChar(100), fullName)
+        .input('SoDienThoai', sql.Char(10), phone ? phone.trim() : null)
+        .input('Email', sql.VarChar(100), email)
+        .input('AnhDaiDien', sql.VarChar(sql.MAX), avatarUrl || null)
+        .query(`
+          UPDATE NguoiDung
+          SET HoTen = @HoTen, SoDienThoai = @SoDienThoai, Email = @Email, AnhDaiDien = @AnhDaiDien, NgayCapNhat = GETDATE()
+          WHERE MaNguoiDung = @Id AND DaXoa = 0
+        `);
+      return result.rowsAffected[0] > 0;
+    } catch (error) {
+      console.error('Error in UserRepository.updateUserProfile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Đổi mật khẩu
+   */
+  async updatePassword(userId, passwordHash) {
+    try {
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('Id', sql.UniqueIdentifier, userId)
+        .input('MatKhauHash', sql.VarChar(255), passwordHash)
+        .query(`
+          UPDATE NguoiDung
+          SET MatKhauHash = @MatKhauHash, NgayCapNhat = GETDATE()
+          WHERE MaNguoiDung = @Id AND DaXoa = 0
+        `);
+      return result.rowsAffected[0] > 0;
+    } catch (error) {
+      console.error('Error in UserRepository.updatePassword:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Kiểm tra email đã bị trùng với người dùng khác
+   */
+  async isEmailTakenByOther(email, currentUserId) {
+    try {
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('Email', sql.VarChar(100), email)
+        .input('CurrentUserId', sql.UniqueIdentifier, currentUserId)
+        .query(`
+          SELECT 1 AS [exists] FROM NguoiDung 
+          WHERE Email = @Email AND MaNguoiDung != @CurrentUserId AND DaXoa = 0
+        `);
+      return result.recordset.length > 0;
+    } catch (error) {
+      console.error('Error in UserRepository.isEmailTakenByOther:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Kiểm tra số điện thoại đã bị trùng với người dùng khác
+   */
+  async isPhoneTakenByOther(phone, currentUserId) {
+    try {
+      const pool = await poolPromise;
+      const result = await pool.request()
+        .input('Phone', sql.Char(10), phone.trim())
+        .input('CurrentUserId', sql.UniqueIdentifier, currentUserId)
+        .query(`
+          SELECT 1 AS [exists] FROM NguoiDung 
+          WHERE SoDienThoai = @Phone AND MaNguoiDung != @CurrentUserId AND DaXoa = 0
+        `);
+      return result.recordset.length > 0;
+    } catch (error) {
+      console.error('Error in UserRepository.isPhoneTakenByOther:', error);
+      throw error;
+    }
+  }
 }
+
 
 module.exports = new UserRepository();

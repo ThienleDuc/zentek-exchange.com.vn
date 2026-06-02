@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, Minus, Plus, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { PATHS } from '../../utils/path.utils';
+import { cartService } from '../../services/cart.service';
+import { orderService } from '../../services/order.service';
 
 interface CartItem {
   maChiTietGioHang: string;
@@ -16,45 +18,6 @@ interface CartItem {
   daHetHang: boolean;
 }
 
-// Mock data (giữ nguyên)
-const mockCartItems: CartItem[] = [
-  {
-    maChiTietGioHang: 'ct1',
-    sanPhamId: 'sp1',
-    tenSanPham: 'Áo thun nam cổ tròn',
-    anh: 'https://picsum.photos/id/1/100/100',
-    phanLoai: 'M, Đen',
-    tenCuaHang: 'Fashion Store',
-    donGia: 150000,
-    soLuong: 2,
-    tonKho: 10,
-    daHetHang: false,
-  },
-  {
-    maChiTietGioHang: 'ct2',
-    sanPhamId: 'sp2',
-    tenSanPham: 'Quần jean rách gối',
-    anh: 'https://picsum.photos/id/2/100/100',
-    phanLoai: 'Size L, Xanh',
-    tenCuaHang: 'Denim Shop',
-    donGia: 350000,
-    soLuong: 1,
-    tonKho: 5,
-    daHetHang: false,
-  },
-  {
-    maChiTietGioHang: 'ct3',
-    sanPhamId: 'sp3',
-    tenSanPham: 'Giày thể thao',
-    anh: 'https://picsum.photos/id/3/100/100',
-    phanLoai: 'Size 42',
-    tenCuaHang: 'Sport Store',
-    donGia: 890000,
-    soLuong: 1,
-    tonKho: 0,
-    daHetHang: true,
-  },
-];
 
 const Cart: React.FC = () => {
   const navigate = useNavigate();
@@ -66,24 +29,23 @@ const Cart: React.FC = () => {
 
   // Lấy giỏ hàng
   const fetchCart = useCallback(async () => {
-    setLoading(true);
-    console.log('[API Giả lập] GET /api/cart');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const stored = localStorage.getItem('cart_items');
-    let cartList = stored ? JSON.parse(stored) : [];
-    if (cartList.length === 0) {
-      cartList = mockCartItems;
-      localStorage.setItem('cart_items', JSON.stringify(cartList));
+    try {
+      setLoading(true);
+      const res = await cartService.getCart();
+      if (res.success) {
+        setItems(res.data);
+        // Mặc định chọn tất cả sản phẩm còn hàng
+        const initialSelected = new Set(
+          res.data.filter((item: any) => !item.daHetHang).map((item: any) => item.maChiTietGioHang)
+        );
+        setSelectedIds(initialSelected as Set<string>);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Không thể tải thông tin giỏ hàng.');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setLoading(false);
     }
-
-    setItems(cartList);
-    // Mặc định chọn tất cả sản phẩm còn hàng
-    const initialSelected = new Set(
-      cartList.filter((item: any) => !item.daHetHang).map((item: any) => item.maChiTietGioHang)
-    );
-    setSelectedIds(initialSelected as Set<string>);
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -100,29 +62,42 @@ const Cart: React.FC = () => {
       setTimeout(() => setError(null), 3000);
       return;
     }
-    setUpdatingItemId(itemId);
-    console.log(`[API Giả lập] PUT /api/cart/update`, { itemId, newQuantity });
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const updated = items.map(i =>
-      i.maChiTietGioHang === itemId ? { ...i, soLuong: newQuantity } : i
-    );
-    setItems(updated);
-    localStorage.setItem('cart_items', JSON.stringify(updated));
-    setUpdatingItemId(null);
+    try {
+      setUpdatingItemId(itemId);
+      const res = await cartService.updateQuantity(itemId, newQuantity);
+      if (res.success) {
+        setItems(prevItems =>
+          prevItems.map(i =>
+            i.maChiTietGioHang === itemId ? { ...i, soLuong: newQuantity } : i
+          )
+        );
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Không thể cập nhật số lượng.');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setUpdatingItemId(null);
+    }
   };
 
   // Xóa sản phẩm
   const removeItem = async (itemId: string) => {
     if (!window.confirm('Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?')) return;
-    console.log(`[API Giả lập] DELETE /api/cart/remove/${itemId}`);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const newItems = items.filter(i => i.maChiTietGioHang !== itemId);
-    setItems(newItems);
-    localStorage.setItem('cart_items', JSON.stringify(newItems));
-    const newSelected = new Set(selectedIds);
-    newSelected.delete(itemId);
-    setSelectedIds(newSelected);
-    alert('Đã xóa sản phẩm');
+    try {
+      setUpdatingItemId(itemId);
+      const res = await cartService.removeItem(itemId);
+      if (res.success) {
+        setItems(prevItems => prevItems.filter(i => i.maChiTietGioHang !== itemId));
+        const newSelected = new Set(selectedIds);
+        newSelected.delete(itemId);
+        setSelectedIds(newSelected);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Không thể xóa sản phẩm khỏi giỏ hàng.');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setUpdatingItemId(null);
+    }
   };
 
   // Chọn / bỏ chọn một sản phẩm
@@ -153,8 +128,17 @@ const Cart: React.FC = () => {
       alert('Vui lòng chọn ít nhất một sản phẩm để thanh toán');
       return;
     }
-    console.log('[Tương tác] Tiến hành thanh toán với các sản phẩm:', selectedItems.map(i => i.maChiTietGioHang));
-    navigate(PATHS.Buyer.CHECKOUT, { state: { selectedIds: Array.from(selectedIds) } });
+    setLoading(true);
+    orderService.createTempOrderFromCart(Array.from(selectedIds))
+      .then(res => {
+        if (res.success && res.data?.tempOrderId) {
+          navigate(`${PATHS.Buyer.CHECKOUT}?tempOrderId=${res.data.tempOrderId}`);
+        }
+      })
+      .catch(err => {
+        alert(err.response?.data?.message || 'Không thể tiến hành thanh toán.');
+        setLoading(false);
+      });
   };
 
   if (loading) {

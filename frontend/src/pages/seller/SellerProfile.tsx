@@ -1,73 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { getProvinces, getProvinceTree } from '../../services/location.service';
 import SearchableDropdown from '../../components/SearchableDropdown';
+import { getSellerProfile, updateSellerProfile, sendOtp as sendOtpApi } from '../../services/profile.service';
+import { uploadImage } from '../../services/upload.service';
+import { storage } from '../../utils/storage.utils';
 
 // ==================== MOCK DATA & API GIẢ LẬP ====================
-// Dữ liệu mặc định
-const defaultUser = {
-  maNguoiDung: 'seller-001',
-  tenDangNhap: 'shopmaster',
-  hoTen: 'Nguyễn Văn A',
-  email: 'shop@example.com',
-  soDienThoai: '0912345678',
-  anhDaiDien: '/avatars/default.jpg',
-  ngayTao: '2024-01-15T00:00:00Z',
-};
 
-const defaultShop = {
-  maCuaHang: 'shop-001',
-  tenCuaHang: 'Cửa hàng thời trang ABC',
-  moTa: 'Chuyên cung cấp quần áo thời trang cao cấp.',
-  logo: '/logos/shop-logo.jpg',
-  diaChi: '123 Đường Láng',        // địa chỉ chi tiết (số nhà, đường)
-  phuongXa: 'Láng Thượng',         // sẽ dùng dropdown
-  quanHuyen: 'Đống Đa',            // dropdown
-  tinhThanh: 'Hà Nội',             // dropdown
-  soDienThoai: '0241234567',
-  loaiHinhCuaHang: 2,
-  maSoThue: '0123456789',
-  pdfGiayPhep: '/licenses/shop-license.pdf',
-  daXacThucPhapLy: true,
-  ngayTao: '2024-02-01T00:00:00Z',
-};
 
-const fetchProfile = (): Promise<{ user: any; shop: any }> => {
-  console.log('[Mock API] GET /api/seller/profile');
-  return new Promise((resolve) => {
-    setTimeout(() => resolve({ user: { ...defaultUser }, shop: { ...defaultShop } }), 500);
-  });
-};
 
-const mockUploadImage = (file: File, type: 'avatar' | 'logo'): Promise<string> => {
-  console.log(`[Mock API] Upload ${type}:`, file.name);
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const fakeUrl = URL.createObjectURL(file);
-      resolve(fakeUrl);
-    }, 500);
-  });
-};
-
-const updateProfile = (userData: any, shopData: any): Promise<{ user: any; shop: any }> => {
-  console.log('[Mock API] PUT /api/seller/profile', { userData, shopData });
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      Object.assign(defaultUser, userData);
-      Object.assign(defaultShop, shopData);
-      resolve({ user: { ...defaultUser }, shop: { ...defaultShop } });
-    }, 800);
-  });
-};
-
-// Hàm gửi mã OTP (mock)
-const sendOtp = (phone: string): Promise<{ success: boolean; message: string }> => {
-  console.log(`[Mock API] Gửi mã OTP tới số ${phone}`);
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({ success: true, message: 'Mã OTP đã được gửi đến số điện thoại' });
-    }, 1000);
-  });
-};
 
 // ==================== COMPONENT CHÍNH ====================
 const SellerProfile: React.FC = () => {
@@ -82,6 +23,8 @@ const SellerProfile: React.FC = () => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
   const [logoPreview, setLogoPreview] = useState<string>('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // State cho dropdown địa chỉ
   const [listTinh, setListTinh] = useState<any[]>([]);
@@ -90,33 +33,38 @@ const SellerProfile: React.FC = () => {
   const [allDistrictsOfProvince, setAllDistrictsOfProvince] = useState<any[]>([]);
 
   useEffect(() => {
-    fetchProfile().then(async ({ user, shop }) => {
-      setUser(user);
-      setShop(shop);
-      setAvatarPreview(user.anhDaiDien);
-      setLogoPreview(shop.logo);
-      
-      const provs = await getProvinces();
-      setListTinh(provs);
-      
-      if (shop.tinhThanh) {
-        const selectedProv = provs.find(p => p.name === shop.tinhThanh);
-        if (selectedProv) {
-          const tree = await getProvinceTree(selectedProv.code);
-          if (tree) {
-            setAllDistrictsOfProvince(tree.districts || []);
-            const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
-              ...w,
-              district_code: d.code
-            })));
-            setListPhuong(flatWards);
-            const matchingDist = (tree.districts || []).find(d => d.name === shop.quanHuyen);
-            if (matchingDist) {
-              setListQuan([matchingDist]);
+    getSellerProfile().then(async (response) => {
+      if (response.success && response.data) {
+        const { user, shop } = response.data;
+        setUser(user);
+        setShop(shop);
+        setAvatarPreview(user.anhDaiDien || '/default-avatar.png');
+        setLogoPreview(shop?.logo || '/default-shop.png');
+        
+        const provs = await getProvinces();
+        setListTinh(provs);
+        
+        if (shop && shop.tinhThanh) {
+          const selectedProv = provs.find(p => p.name === shop.tinhThanh);
+          if (selectedProv) {
+            const tree = await getProvinceTree(selectedProv.code);
+            if (tree) {
+              setAllDistrictsOfProvince(tree.districts || []);
+              const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
+                ...w,
+                district_code: d.code
+              })));
+              setListPhuong(flatWards);
+              const matchingDist = (tree.districts || []).find(d => d.name === shop.quanHuyen);
+              if (matchingDist) {
+                setListQuan([matchingDist]);
+              }
             }
           }
         }
       }
+      setLoading(false);
+    }).catch(() => {
       setLoading(false);
     });
   }, []);
@@ -136,6 +84,79 @@ const SellerProfile: React.FC = () => {
       setLogoFile(file);
       setLogoPreview(URL.createObjectURL(file));
     }
+  };
+
+  const handleSaveAvatar = async () => {
+    if (!avatarFile) return;
+    setUploadingAvatar(true);
+    try {
+      const res = await uploadImage(avatarFile);
+      if (res.success && res.url) {
+        const updatedUser = { ...user, anhDaiDien: res.url };
+        const response = await updateSellerProfile({
+          user: updatedUser,
+          shop: shop
+        });
+        if (response.success) {
+          setUser(updatedUser);
+          setAvatarFile(null);
+          const currentUser = storage.getUser();
+          if (currentUser) {
+            storage.setUser({
+              ...currentUser,
+              avatar: res.url || undefined
+            });
+          }
+          alert('Cập nhật ảnh đại diện thành công!');
+        } else {
+          alert(response.message || 'Cập nhật ảnh đại diện thất bại.');
+        }
+      } else {
+        alert(res.message || 'Tải ảnh đại diện lên thất bại.');
+      }
+    } catch (error: any) {
+      alert(error.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleCancelAvatar = () => {
+    setAvatarFile(null);
+    setAvatarPreview(user?.anhDaiDien || '/default-avatar.png');
+  };
+
+  const handleSaveLogo = async () => {
+    if (!logoFile) return;
+    setUploadingLogo(true);
+    try {
+      const res = await uploadImage(logoFile);
+      if (res.success && res.url) {
+        const updatedShop = { ...shop, logo: res.url };
+        const response = await updateSellerProfile({
+          user: user,
+          shop: updatedShop
+        });
+        if (response.success) {
+          setShop(updatedShop);
+          setLogoFile(null);
+          alert('Cập nhật logo cửa hàng thành công!');
+        } else {
+          alert(response.message || 'Cập nhật logo cửa hàng thất bại.');
+        }
+      } else {
+        alert(res.message || 'Tải logo cửa hàng lên thất bại.');
+      }
+    } catch (error: any) {
+      alert(error.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleCancelLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(shop?.logo || '/default-shop.png');
   };
 
   const handleUserChange = (field: string, value: any) => {
@@ -192,20 +213,30 @@ const SellerProfile: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      let newAvatarUrl = user.anhDaiDien;
-      let newLogoUrl = shop.logo;
-      if (avatarFile) newAvatarUrl = await mockUploadImage(avatarFile, 'avatar');
-      if (logoFile) newLogoUrl = await mockUploadImage(logoFile, 'logo');
-      const updatedUser = { ...user, anhDaiDien: newAvatarUrl };
-      const updatedShop = { ...shop, logo: newLogoUrl };
-      await updateProfile(updatedUser, updatedShop);
-      setUser(updatedUser);
-      setShop(updatedShop);
-      setAvatarFile(null);
-      setLogoFile(null);
-      alert('Cập nhật thành công!');
-    } catch (error) {
-      alert('Có lỗi xảy ra, vui lòng thử lại.');
+      const response = await updateSellerProfile({
+        user: user,
+        shop: shop,
+        otp: otp || undefined
+      });
+
+      if (response.success) {
+        setOtp('');
+        // Cập nhật storage để hiển thị tên và avatar mới ngay trên thanh điều hướng
+        const currentUser = storage.getUser();
+        if (currentUser) {
+          storage.setUser({
+            ...currentUser,
+            fullName: user.hoTen,
+            email: user.email,
+            avatar: user.anhDaiDien || undefined
+          });
+        }
+        alert('Cập nhật thành công!');
+      } else {
+        alert(response.message || 'Cập nhật thất bại. Vui lòng thử lại.');
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || error.message || 'Có lỗi xảy ra, vui lòng thử lại.');
     } finally {
       setSaving(false);
     }
@@ -216,12 +247,16 @@ const SellerProfile: React.FC = () => {
       alert('Vui lòng nhập số điện thoại trước khi gửi mã OTP');
       return;
     }
-    const result = await sendOtp(user.soDienThoai);
-    if (result.success) {
-      setOtpSent(true);
-      alert(result.message);
-    } else {
-      alert('Gửi mã thất bại, vui lòng thử lại');
+    try {
+      const result = await sendOtpApi({ phone: user.soDienThoai });
+      if (result.success) {
+        setOtpSent(true);
+        alert(result.message || 'Mã OTP đã được gửi đến số điện thoại');
+      } else {
+        alert(result.message || 'Gửi mã thất bại, vui lòng thử lại');
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || error.message || 'Gửi mã thất bại, vui lòng thử lại');
     }
   };
 
@@ -250,10 +285,21 @@ const SellerProfile: React.FC = () => {
               <img src={avatarPreview || '/default-avatar.png'} alt="Avatar" />
             </div>
             <div className="upload-button-wrapper">
-              <label className="btn-upload">
-                Đổi ảnh
-                <input type="file" accept="image/*" onChange={handleAvatarChange} hidden />
-              </label>
+              {!avatarFile ? (
+                <label className="btn-upload">
+                  Đổi ảnh
+                  <input type="file" accept="image/*" onChange={handleAvatarChange} hidden />
+                </label>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                  <button type="button" className="btn-save-image" onClick={handleSaveAvatar} disabled={uploadingAvatar}>
+                    {uploadingAvatar ? 'Đang lưu...' : 'Lưu'}
+                  </button>
+                  <button type="button" className="btn-cancel-image" onClick={handleCancelAvatar} disabled={uploadingAvatar}>
+                    Hủy
+                  </button>
+                </div>
+              )}
             </div>
             <span className="file-note">Hỗ trợ JPG, PNG</span>
           </div>
@@ -263,10 +309,21 @@ const SellerProfile: React.FC = () => {
               <img src={logoPreview || '/default-shop.png'} alt="Logo" />
             </div>
             <div className="upload-button-wrapper">
-              <label className="btn-upload">
-                Đổi ảnh
-                <input type="file" accept="image/*" onChange={handleLogoChange} hidden />
-              </label>
+              {!logoFile ? (
+                <label className="btn-upload">
+                  Đổi ảnh
+                  <input type="file" accept="image/*" onChange={handleLogoChange} hidden />
+                </label>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                  <button type="button" className="btn-save-image" onClick={handleSaveLogo} disabled={uploadingLogo}>
+                    {uploadingLogo ? 'Đang lưu...' : 'Lưu'}
+                  </button>
+                  <button type="button" className="btn-cancel-image" onClick={handleCancelLogo} disabled={uploadingLogo}>
+                    Hủy
+                  </button>
+                </div>
+              )}
             </div>
             <span className="file-note">Logo vuông đẹp nhất</span>
           </div>
@@ -403,7 +460,7 @@ const SellerProfile: React.FC = () => {
         </div>
       </div>
 
-      <div className="dev-note">[Mock API] Dữ liệu giả lập, kiểm tra console log.</div>
+      <div className="dev-note">[API Hệ thống] Dữ liệu thực tế được đồng bộ hóa.</div>
     </div>
   );
 };

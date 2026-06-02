@@ -62,6 +62,44 @@ const ProductDescription: React.FC<ProductDescriptionProps> = ({ product }) => {
     setNumPages(numPages);
   }
 
+  const handlePreviewDescFile = () => {
+    const fileMoTa = product.FileMoTa;
+    if (!fileMoTa) return;
+    
+    // Check if it's already a full URL or a relative path of a saved file
+    if (fileMoTa.toLowerCase().endsWith('.pdf') || fileMoTa.toLowerCase().endsWith('.txt') || fileMoTa.toLowerCase().endsWith('.doc') || fileMoTa.toLowerCase().endsWith('.docx')) {
+      const url = fileMoTa.startsWith('http') ? fileMoTa : `${SERVER_URL}/uploads/products/${fileMoTa}`;
+      window.open(url, '_blank');
+      return;
+    }
+    
+    // If it's a base64 data URL
+    if (fileMoTa.startsWith('data:')) {
+      try {
+        const parts = fileMoTa.split(';base64,');
+        const contentType = parts[0].split(':')[1];
+        const raw = window.atob(parts[1]);
+        const rawLength = raw.length;
+        const uInt8Array = new Uint8Array(rawLength);
+        for (let i = 0; i < rawLength; ++i) {
+          uInt8Array[i] = raw.charCodeAt(i);
+        }
+        const blob = new Blob([uInt8Array], { type: contentType });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+      } catch (err) {
+        // Fallback: try opening the data URL directly
+        window.open(fileMoTa, '_blank');
+      }
+      return;
+    }
+
+    // If it's just raw text, we can show it in a text window
+    const blob = new Blob([fileMoTa], { type: 'text/plain;charset=utf-8' });
+    const blobUrl = URL.createObjectURL(blob);
+    window.open(blobUrl, '_blank');
+  };
+
   let pdfFileSource = '';
   let decodeError = false;
 
@@ -82,7 +120,21 @@ const ProductDescription: React.FC<ProductDescriptionProps> = ({ product }) => {
 
   return (
     <div className={`bg-white rounded-xl shadow-sm border border-border-default p-6 flex flex-col ${!isDescExpanded ? 'flex-1 min-h-[250px]' : 'h-fit'}`} ref={containerRef}>
-      <h2 className="text-lg font-bold text-text-main mb-4 flex-none">Mô tả sản phẩm</h2>
+      <div className="flex justify-between items-center mb-4 flex-none">
+        <h2 className="text-lg font-bold text-text-main">Mô tả sản phẩm</h2>
+        {product.FileMoTa && (
+          <button
+            onClick={handlePreviewDescFile}
+            className="px-3 py-1.5 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg border border-primary/20 transition flex items-center gap-1.5"
+            title="Xem trước file mô tả trong tab mới"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            <span>Mở tab mới</span>
+          </button>
+        )}
+      </div>
       
       <div ref={contentWrapperRef} className={`relative overflow-hidden transition-all duration-300 ${!isDescExpanded ? 'flex-1 min-h-0' : 'max-h-[10000px] pb-4'}`}>
         {product.FileMoTa ? (

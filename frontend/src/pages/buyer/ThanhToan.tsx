@@ -1,62 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AlertCircle, Info, Truck } from 'lucide-react';
 import { PATHS } from '../../utils/path.utils';
-import { getProvinces, getProvinceTree, type Province, type District, type Ward } from '../../services/location.service';
+import { getProvinces, getDistricts, getWards, type Province, type District, type Ward } from '../../services/location.service';
 import SearchableDropdown from '../../components/SearchableDropdown';
-
-// Types are imported from location.service
-
-// --- Mock sản phẩm trong giỏ ---
-interface CartItem {
-  maChiTietGioHang: string;
-  sanPhamId: string;
-  tenSanPham: string;
-  anh: string;
-  phanLoai?: string;
-  donGia: number;
-  soLuong: number;
-  tonKho: number;
-  daHetHang: boolean;
-}
-
-const mockCartItems: CartItem[] = [
-  {
-    maChiTietGioHang: 'ct1',
-    sanPhamId: 'sp1',
-    tenSanPham: 'Áo thun nam cổ tròn',
-    anh: 'https://picsum.photos/id/1/80/80',
-    phanLoai: 'M, Đen',
-    donGia: 150000,
-    soLuong: 2,
-    tonKho: 10,
-    daHetHang: false,
-  },
-  {
-    maChiTietGioHang: 'ct2',
-    sanPhamId: 'sp2',
-    tenSanPham: 'Quần jean rách gối',
-    anh: 'https://picsum.photos/id/2/80/80',
-    phanLoai: 'Size L, Xanh',
-    donGia: 350000,
-    soLuong: 1,
-    tonKho: 5,
-    daHetHang: false,
-  },
-];
-
-const mockUser = {
-  hoTen: 'Trần Thị Bích',
-  soDienThoai: '0912345678',
-  // Không có email
-};
+import { orderService, type OrderItem } from '../../services/order.service';
+import { storage } from '../../utils/storage.utils';
 
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const tempOrderId = new URLSearchParams(location.search).get('tempOrderId') || '';
 
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<OrderItem[]>([]);
   const [loadingCart, setLoadingCart] = useState(true);
-  const [userInfo, setUserInfo] = useState({ hoTen: '', soDienThoai: '' }); // Không có email
+  const [userInfo, setUserInfo] = useState(() => {
+    const user = storage.getUser();
+    return {
+      hoTen: user?.fullName || '',
+      soDienThoai: user?.phone || ''
+    };
+  });
   const [address, setAddress] = useState({
     provinceCode: '',
     districtCode: '',
@@ -68,6 +32,7 @@ const Checkout: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState('');
+  const [createdOrderIds, setCreatedOrderIds] = useState<string[]>([]);
 
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
@@ -77,17 +42,43 @@ const Checkout: React.FC = () => {
   const subtotal = cartItems.reduce((sum, item) => sum + item.donGia * item.soLuong, 0);
   const total = subtotal;
 
-  const fetchCheckoutData = useCallback(async () => {
-    setLoadingCart(true);
-    console.log('[API Giả lập] GET /api/cart/checkout-data');
-    await new Promise(resolve => setTimeout(resolve, 800));
-    setCartItems(mockCartItems.filter(item => !item.daHetHang));
-    setUserInfo({
-      hoTen: mockUser.hoTen,
-      soDienThoai: mockUser.soDienThoai,
+  // Group cart items by shop/store
+  const groupedItems = useMemo(() => {
+    const groups: Record<string, { shopName: string; shopLogo: string | null; items: OrderItem[] }> = {};
+    cartItems.forEach(item => {
+      const shopKey = item.tenCuaHang || 'Cửa hàng';
+      if (!groups[shopKey]) {
+        groups[shopKey] = {
+          shopName: shopKey,
+          shopLogo: item.logoCuaHang || null,
+          items: []
+        };
+      }
+      groups[shopKey].items.push(item);
     });
-    setLoadingCart(false);
-  }, []);
+    return Object.values(groups);
+  }, [cartItems]);
+
+  const fetchCheckoutData = useCallback(async () => {
+    if (!tempOrderId) {
+      setLoadingCart(false);
+      alert('Không tìm thấy mã đơn hàng tạm.');
+      navigate(PATHS.Buyer.CART);
+      return;
+    }
+    try {
+      setLoadingCart(true);
+      const res = await orderService.getTempOrder(tempOrderId);
+      if (res.success) {
+        setCartItems(res.data.items);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Đơn hàng tạm không tồn tại hoặc đã hết hạn.');
+      navigate(PATHS.Buyer.CART);
+    } finally {
+      setLoadingCart(false);
+    }
+  }, [tempOrderId, navigate]);
 
   const fetchProvinces = useCallback(async () => {
     const data = await getProvinces();
@@ -99,47 +90,34 @@ const Checkout: React.FC = () => {
     fetchProvinces();
   }, [fetchCheckoutData, fetchProvinces]);
 
-  const [allDistrictsOfProvince, setAllDistrictsOfProvince] = useState<any[]>([]);
-
   const handleProvinceChange = async (val: string | number) => {
     const provinceCode = Number(val);
     setAddress(prev => ({ ...prev, provinceCode: String(provinceCode), districtCode: '', wardCode: '' }));
     setDistricts([]);
     setWards([]);
-    setAllDistrictsOfProvince([]);
     if (provinceCode) {
       setLoadingWards(true);
-      const tree = await getProvinceTree(provinceCode);
-      if (tree) {
-        setAllDistrictsOfProvince(tree.districts || []);
-        const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
-          ...w,
-          district_code: d.code
-        })));
-        setWards(flatWards as any[]);
-      }
+      const fetchedDistricts = await getDistricts(provinceCode);
+      setDistricts(fetchedDistricts);
+      setLoadingWards(false);
+    }
+  };
+
+  const handleDistrictChange = async (val: string | number) => {
+    const districtCode = Number(val);
+    setAddress(prev => ({ ...prev, districtCode: String(districtCode), wardCode: '' }));
+    setWards([]);
+    if (districtCode) {
+      setLoadingWards(true);
+      const fetchedWards = await getWards(districtCode);
+      setWards(fetchedWards);
       setLoadingWards(false);
     }
   };
 
   const handleWardChange = (val: string | number) => {
     const wardCode = Number(val);
-    const ward = wards.find((w: any) => Number(w.code) === wardCode) as any;
-    setAddress(prev => ({ ...prev, wardCode: String(wardCode), districtCode: '' }));
-    setDistricts([]);
-    if (ward) {
-      const distCode = ward.district_code;
-      const matchingDist = allDistrictsOfProvince.find(d => d.code === distCode);
-      if (matchingDist) {
-        setDistricts([matchingDist]);
-        setAddress(prev => ({ ...prev, districtCode: String(matchingDist.code) }));
-      }
-    }
-  };
-
-  const handleDistrictChange = (val: string | number) => {
-    const districtCode = Number(val);
-    setAddress(prev => ({ ...prev, districtCode: String(districtCode) }));
+    setAddress(prev => ({ ...prev, wardCode: String(wardCode) }));
   };
 
   const validateForm = (): boolean => {
@@ -165,31 +143,47 @@ const Checkout: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
+    if (!tempOrderId) {
+      alert('Không tìm thấy mã đơn hàng tạm.');
+      return;
+    }
     setSubmitting(true);
-    console.log('[API Giả lập] POST /api/orders', {
-      hoTen: userInfo.hoTen,
-      soDienThoai: userInfo.soDienThoai,
-      // Không gửi email
-      diaChi: getFullAddress(),
-      ghiChu: note,
-      phuongThucThanhToan: 'COD',
-      items: cartItems.map(item => ({
-        sanPhamId: item.sanPhamId,
-        soLuong: item.soLuong,
-        donGia: item.donGia,
-        phanLoai: item.phanLoai,
-      })),
-    });
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const mockOrderId = 'DH' + Math.floor(Math.random() * 10000);
-    setCreatedOrderId(mockOrderId);
-    setSubmitting(false);
-    setShowSuccessModal(true);
+    try {
+      const orderParams = {
+        tempOrderId,
+        hoTenNguoiNhan: userInfo.hoTen,
+        soDienThoaiNguoiNhan: userInfo.soDienThoai,
+        diaChiNhan: getFullAddress(),
+        ghiChu: note,
+        items: cartItems.map(item => ({
+          sanPhamId: item.sanPhamId,
+          phanLoaiId: item.phanLoaiId,
+          soLuong: item.soLuong
+        }))
+      };
+
+      const res = await orderService.placeOrder(orderParams);
+      if (res.success && res.data?.MaDonHang) {
+        const orderIds = res.data.maDonHangs || [res.data.MaDonHang];
+        setCreatedOrderIds(orderIds);
+        setCreatedOrderId(res.data.MaDonHang);
+        setShowSuccessModal(true);
+      }
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleViewOrder = () => {
-    console.log(`[Tương tác] Xem chi tiết đơn hàng ${createdOrderId}`);
-    navigate(PATHS.Buyer.HOA_DON_BAN_HANG.replace(':orderId', createdOrderId));
+    if (createdOrderIds.length > 1) {
+      console.log(`[Tương tác] Xem danh sách đơn hàng (${createdOrderIds.length} đơn)`);
+      navigate(PATHS.Buyer.ORDERS);
+    } else {
+      console.log(`[Tương tác] Xem chi tiết đơn hàng ${createdOrderId}`);
+      navigate(PATHS.Buyer.HOA_DON_BAN_HANG.replace(':orderId', createdOrderId));
+    }
   };
 
   const handleContinueShopping = () => {
@@ -273,18 +267,6 @@ const Checkout: React.FC = () => {
                       {errors.province && <span className="error">{errors.province}</span>}
                     </div>
                     <div className="form-group">
-                      <label>Phường/Xã *</label>
-                      <SearchableDropdown
-                        theme="admin"
-                        options={wards.map(w => ({ value: w.code, label: w.name }))}
-                        value={address.wardCode}
-                        onChange={handleWardChange}
-                        placeholder="Chọn Phường/Xã"
-                        disabled={!address.provinceCode || loadingWards}
-                      />
-                      {errors.ward && <span className="error">{errors.ward}</span>}
-                    </div>
-                    <div className="form-group">
                       <label>Quận/Huyện *</label>
                       <SearchableDropdown
                         theme="admin"
@@ -292,9 +274,21 @@ const Checkout: React.FC = () => {
                         value={address.districtCode}
                         onChange={handleDistrictChange}
                         placeholder="Chọn Quận/Huyện"
-                        disabled={!address.wardCode}
+                        disabled={!address.provinceCode}
                       />
                       {errors.district && <span className="error">{errors.district}</span>}
+                    </div>
+                    <div className="form-group">
+                      <label>Phường/Xã *</label>
+                      <SearchableDropdown
+                        theme="admin"
+                        options={wards.map(w => ({ value: w.code, label: w.name }))}
+                        value={address.wardCode}
+                        onChange={handleWardChange}
+                        placeholder="Chọn Phường/Xã"
+                        disabled={!address.districtCode || loadingWards}
+                      />
+                      {errors.ward && <span className="error">{errors.ward}</span>}
                     </div>
                   </div>
                   <div className="form-group">
@@ -340,15 +334,31 @@ const Checkout: React.FC = () => {
             <div className="order-summary-card">
               <h3>Đơn hàng của bạn</h3>
               <div className="summary-items">
-                {cartItems.map(item => (
-                  <div key={item.maChiTietGioHang} className="summary-item">
-                    <img src={item.anh} alt={item.tenSanPham} />
-                    <div className="summary-item-info">
-                      <div className="summary-item-name">{item.tenSanPham}</div>
-                      {item.phanLoai && <div className="summary-item-variant">{item.phanLoai}</div>}
-                      <div className="summary-item-price">x{item.soLuong} · {item.donGia.toLocaleString()}đ</div>
+                {groupedItems.map((group, groupIdx) => (
+                  <div key={groupIdx} className="summary-shop-group">
+                    <div className="summary-shop-header">
+                      {group.shopLogo ? (
+                        <img src={group.shopLogo} alt={group.shopName} className="summary-shop-logo" />
+                      ) : (
+                        <div className="summary-shop-icon-fallback">
+                          {group.shopName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span>{group.shopName}</span>
                     </div>
-                    <div className="summary-item-total">{(item.donGia * item.soLuong).toLocaleString()}đ</div>
+                    <div className="summary-shop-divider" />
+                    
+                    {group.items.map(item => (
+                      <div key={item.sanPhamId + '_' + (item.phanLoaiId || '')} className="summary-item">
+                        <img src={item.anh} alt={item.tenSanPham} />
+                        <div className="summary-item-info">
+                          <div className="summary-item-name">{item.tenSanPham}</div>
+                          {item.phanLoai && <div className="summary-item-variant">{item.phanLoai}</div>}
+                          <div className="summary-item-price">x{item.soLuong} · {item.donGia.toLocaleString()}đ</div>
+                        </div>
+                        <div className="summary-item-total">{(item.donGia * item.soLuong).toLocaleString()}đ</div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -376,7 +386,18 @@ const Checkout: React.FC = () => {
             <div className="text-center">
               <div className="text-green-500 text-5xl mb-3">✓</div>
               <h3 className="text-xl font-bold mb-2">Đặt hàng thành công!</h3>
-              <p className="text-gray-600 mb-4">Mã đơn hàng: <strong>{createdOrderId}</strong></p>
+              {createdOrderIds.length > 1 ? (
+                <>
+                  <p className="text-gray-600 mb-2 text-sm">
+                    Đơn hàng của bạn đã được tự động tách thành <strong>{createdOrderIds.length} đơn hàng</strong> riêng biệt theo từng shop:
+                  </p>
+                  <p className="text-gray-800 font-semibold mb-4 text-xs bg-gray-50 p-2 rounded max-h-20 overflow-y-auto">
+                    {createdOrderIds.join(', ')}
+                  </p>
+                </>
+              ) : (
+                <p className="text-gray-600 mb-4 text-sm">Mã đơn hàng: <strong>{createdOrderId}</strong></p>
+              )}
               <p className="text-sm text-gray-500 mb-6">Cảm ơn bạn đã mua sắm tại ZenTekExchange</p>
               <div className="flex gap-3 justify-center">
                 <button onClick={handleViewOrder} className="px-4 py-2 bg-primary text-white rounded-lg">Xem đơn hàng</button>

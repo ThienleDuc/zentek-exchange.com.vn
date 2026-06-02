@@ -4,76 +4,15 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar
 } from 'recharts';
+import {
+  getSellerOverview,
+  getSellerRevenueChart,
+  getSellerGrowth,
+  getSellerTopProducts,
+  getSellerRatingDistribution
+} from '../../services/profile.service';
 
-// ==================== MOCK DATA & API GIẢ LẬP ====================
-
-const mockKpiData = {
-  totalRevenue: 245800000,
-  totalOrders: 342,
-  totalProductsSold: 1289,
-  averageRating: 4.6,
-  cancelRate: 3.2,
-  stockItems: 547,
-};
-
-const generateChartData = (days: number) => {
-  const data = [];
-  const today = new Date();
-  for (let i = days; i >= 0; i--) {
-    const date = new Date();
-    date.setDate(today.getDate() - i);
-    const dateStr = date.toISOString().slice(0, 10);
-    const revenue = Math.floor(5000000 + Math.random() * 15000000);
-    const orders = Math.floor(5 + Math.random() * 25);
-    data.push({ date: dateStr, revenue, orders });
-  }
-  return data;
-};
-
-const mockGrowthData = {
-  revenue: { current: 245800000, previous: 212000000, percent: 15.9 },
-  orders: { current: 342, previous: 298, percent: 14.8 },
-  productsSold: { current: 1289, previous: 1150, percent: 12.1 },
-};
-
-const mockTopProducts = [
-  { id: 'sp1', name: 'Áo thun cotton cao cấp', image: '/products/ao-thun.jpg', sold: 245, revenue: 36750000, rating: 4.8 },
-  { id: 'sp2', name: 'Quần jeans nam rách gối', image: '/products/quan-jeans.jpg', sold: 189, revenue: 47250000, rating: 4.5 },
-  // ... (có thể rút gọn, nhưng giữ đủ 10 sản phẩm để demo)
-];
-
-const mockRatingDistribution = [
-  { stars: 5, count: 320 },
-  { stars: 4, count: 210 },
-  { stars: 3, count: 85 },
-  { stars: 2, count: 30 },
-  { stars: 1, count: 15 },
-];
-
-const fetchOverview = (): Promise<any> => {
-  console.log('[Mock API] GET /api/seller/dashboard/overview');
-  return new Promise((resolve) => setTimeout(() => resolve({ ...mockKpiData }), 600));
-};
-
-const fetchChartData = (days: number): Promise<any[]> => {
-  console.log(`[Mock API] GET /api/seller/dashboard/revenue-chart?period=${days}d`);
-  return new Promise((resolve) => setTimeout(() => resolve(generateChartData(days)), 500));
-};
-
-const fetchGrowthData = (): Promise<any> => {
-  console.log('[Mock API] GET /api/seller/dashboard/growth');
-  return new Promise((resolve) => setTimeout(() => resolve({ ...mockGrowthData }), 400));
-};
-
-const fetchTopProducts = (limit: number = 10): Promise<any[]> => {
-  console.log(`[Mock API] GET /api/seller/dashboard/top-products?limit=${limit}`);
-  return new Promise((resolve) => setTimeout(() => resolve([...mockTopProducts]), 500));
-};
-
-const fetchRatingDistribution = (): Promise<any[]> => {
-  console.log('[Mock API] GET /api/seller/dashboard/rating-distribution');
-  return new Promise((resolve) => setTimeout(() => resolve([...mockRatingDistribution]), 300));
-};
+// ==================== API SERVICES ====================
 
 // ==================== COMPONENT CHÍNH ====================
 const SellerDashboard: React.FC = () => {
@@ -92,12 +31,21 @@ const SellerDashboard: React.FC = () => {
     setError(null);
     setLoading({ overview: true, chart: true, growth: true, topProducts: true, ratingDist: true });
     try {
-      const [overview, chart, growthData, products, ratings] = await Promise.all([
-        fetchOverview(), fetchChartData(period), fetchGrowthData(), fetchTopProducts(10), fetchRatingDistribution()
+      const [overviewRes, chartRes, growthRes, productsRes, ratingsRes] = await Promise.all([
+        getSellerOverview(),
+        getSellerRevenueChart(`${period}d`),
+        getSellerGrowth(`${period}d`),
+        getSellerTopProducts(10),
+        getSellerRatingDistribution()
       ]);
-      setKpi(overview); setChartData(chart); setGrowth(growthData); setTopProducts(products); setRatingDist(ratings);
-    } catch (err) {
-      setError('Không thể tải dữ liệu. Vui lòng thử lại.');
+      
+      if (overviewRes.success) setKpi(overviewRes.data);
+      if (chartRes.success) setChartData(chartRes.data);
+      if (growthRes.success) setGrowth(growthRes.data);
+      if (productsRes.success) setTopProducts(productsRes.data);
+      if (ratingsRes.success) setRatingDist(ratingsRes.data);
+    } catch (err: any) {
+      setError(err.message || 'Không thể tải dữ liệu. Vui lòng thử lại.');
     } finally {
       setLoading({ overview: false, chart: false, growth: false, topProducts: false, ratingDist: false });
     }
@@ -205,7 +153,7 @@ const SellerDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="dev-note">[Mock API] Dữ liệu giả lập, không gọi thật.</div>
+        <div className="dev-note">[API Hệ thống] Dữ liệu thực tế được đồng bộ hóa.</div>
       </div>
     </div>
   );

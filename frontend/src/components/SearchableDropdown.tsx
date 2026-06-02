@@ -35,7 +35,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   );
 
   // Tìm label của option đang được chọn
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find(opt => String(opt.value) === String(value));
 
   // Đóng dropdown khi click ra ngoài
   useEffect(() => {
@@ -145,7 +145,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
               filteredOptions.map((option) => (
                 <div 
                   key={option.value}
-                  className={getItemClasses(value === option.value)}
+                  className={getItemClasses(String(value) === String(option.value))}
                   onClick={() => handleSelect(option.value)}
                 >
                   {option.label}

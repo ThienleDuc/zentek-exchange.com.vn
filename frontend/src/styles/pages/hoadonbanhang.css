@@ -134,6 +134,13 @@
     padding: 0.6rem 0.3rem;
     vertical-align: top;
   }
+  .invoice-table-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  .invoice-table-row:hover {
+    background-color: #f1f3f5;
+  }
   .invoice-table th {
     text-align: left;
     background-color: #f8f9fa;
@@ -249,5 +256,438 @@
       padding: 0.3rem 0.8rem;
       font-size: 0.75rem;
     }
+  }
+}
+
+/* Print Styling to print only the paper invoice */
+@media print {
+  html, body, #root, .invoice-page {
+    background-color: white !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
+  
+  /* Hide all other elements on the page */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Make the invoice paper and its children visible */
+  .invoice-paper, .invoice-paper * {
+    visibility: visible;
+  }
+  
+  .invoice-paper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+  }
+  
+  .invoice-actions {
+    display: none !important;
+  }
+}
+
+/* Styling for the reusable ReviewModal component */
+.review-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 1rem;
+}
+
+.review-modal-container {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 680px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, sans-serif;
+  border: 1px solid #e9ecef;
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.review-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f1f3f5;
+  background-color: #f8f9fa;
+}
+
+.review-modal-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #212529;
+  margin: 0;
+}
+
+.review-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #868e96;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.review-modal-close:hover {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+/* Horizontal chips list */
+.review-products-chips {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+  border-bottom: 1px solid #f1f3f5;
+  scrollbar-width: thin;
+}
+
+.review-products-chips::-webkit-scrollbar {
+  height: 4px;
+}
+
+.review-products-chips::-webkit-scrollbar-thumb {
+  background-color: #dee2e6;
+  border-radius: 4px;
+}
+
+.review-product-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  text-align: left;
+  max-width: 200px;
+}
+
+.review-product-chip:hover {
+  background-color: #f1f3f5;
+  border-color: #ced4da;
+}
+
+.review-product-chip.chip--active {
+  background-color: #e8f4fd;
+  border-color: #3b82f6;
+}
+
+.review-product-chip.chip--completed {
+  border-style: dashed;
+}
+
+.chip-img {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+}
+
+.chip-details {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chip-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #212529;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.chip-stars {
+  font-size: 0.75rem;
+  color: #f59e0b;
+}
+
+.chip-check {
+  font-size: 0.75rem;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-weight: 500;
+}
+
+/* Review Form area */
+.review-form-area {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.review-form-product-info {
+  font-size: 0.95rem;
+  color: #495057;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed #f1f3f5;
+}
+
+.review-field-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.5rem;
+}
+
+.review-stars-section {
+  margin-bottom: 1.25rem;
+}
+
+.review-stars-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.review-star-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s;
+}
+
+.review-star-btn:hover {
+  transform: scale(1.15);
+}
+
+.review-rating-text {
+  margin-left: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.review-comment-section {
+  margin-bottom: 1.25rem;
+}
+
+.review-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.review-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Media upload area */
+.review-media-section {
+  margin-bottom: 0.5rem;
+}
+
+.review-media-buttons {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.review-upload-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #fff;
+  border: 1px dashed #3b82f6;
+  color: #3b82f6;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.review-upload-trigger:hover:not(.disabled) {
+  background-color: #eff6ff;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.review-upload-trigger.disabled {
+  border-color: #dee2e6;
+  color: #adb5bd;
+  cursor: not-allowed;
+  background-color: #f8f9fa;
+}
+
+.hidden {
+  display: none;
+}
+
+.review-previews-gallery {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.review-preview-thumb {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #dee2e6;
+  background-color: #000;
+}
+
+.review-preview-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-preview-thumb {
+  width: 140px;
+}
+
+.video-preview-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.review-thumb-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  border: none;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  line-height: 1;
+}
+
+.review-thumb-remove:hover {
+  background-color: #ef4444;
+}
+
+/* Footer buttons */
+.review-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid #f1f3f5;
+  background-color: #f8f9fa;
+}
+
+.review-btn {
+  padding: 0.5rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.review-btn.btn-secondary {
+  background-color: #fff;
+  border-color: #ced4da;
+  color: #495057;
+}
+
+.review-btn.btn-secondary:hover:not(:disabled) {
+  background-color: #f1f3f5;
+}
+
+.review-btn.btn-primary {
+  background-color: #3b82f6;
+  color: #fff;
+}
+
+.review-btn.btn-primary:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.review-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Hide review modal overlay during print */
+@media print {
+  .review-modal-overlay {
+    display: none !important;
   }
 }

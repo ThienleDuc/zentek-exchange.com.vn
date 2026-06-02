@@ -180,14 +180,14 @@ const Home: React.FC = () => {
           title="Bán chạy nhất"
           icon="🔥"
           sortBy="best_seller"
-          limit={20}
+          limit={18}
         />
         {/* Khối sản phẩm mới nhất */}
         <ProductSection
           title="Mới nhất"
           icon="✨"
           sortBy="newest"
-          limit={20}
+          limit={18}
         />
       </div>
     </main>

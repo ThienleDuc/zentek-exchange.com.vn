@@ -40,3 +40,18 @@ export const sendOTP = async (email: string): Promise<AuthResponse> => {
     throw new Error(message);
   }
 };
+
+export const changePassword = async (payload: {
+  oldPassword?: string;
+  currentPassword?: string;
+  newPassword: string;
+}): Promise<any> => {
+  try {
+    const response = await api.put('/nguoidung/doi-mat-khau', payload);
+    return response.data;
+  } catch (error: any) {
+    const message = error.response?.data?.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại.';
+    throw new Error(message);
+  }
+};
+
