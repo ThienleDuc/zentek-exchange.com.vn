@@ -214,12 +214,12 @@ class ChatAdminService {
       WHERE CuocTroChuyenId = @convId AND NguoiGuiId != @userId AND DaDoc = 0
     `);
 
-    const extraWhere = isAdminUser ? '' : ' AND t.DaThuHoi = 0';
+    request.input('isAdminUser', sql.Bit, isAdminUser ? 1 : 0);
 
     const result = await request.query(`
       SELECT 
         t.MaTinNhan,
-        t.NoiDung,
+        CASE WHEN t.DaThuHoi = 1 AND @isAdminUser = 0 THEN N'Tin nhắn đã được thu hồi' ELSE t.NoiDung END as NoiDung,
         t.NgayGui,
         t.NguoiGuiId,
         t.DaDoc,
@@ -233,7 +233,7 @@ class ChatAdminService {
         (
            SELECT LoaiMedia, DuongDanMedia 
            FROM PhanHoiMedia 
-           WHERE TinNhanId = t.MaTinNhan 
+           WHERE TinNhanId = t.MaTinNhan AND (t.DaThuHoi = 0 OR @isAdminUser = 1)
            FOR JSON PATH
         ) as MediaFiles
       FROM TinNhan t
@@ -241,7 +241,7 @@ class ChatAdminService {
       JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
       LEFT JOIN CuaHang ch ON n.MaNguoiDung = ch.NguoiBanId
       LEFT JOIN ThanhVienCuocTroChuyen tv ON t.NguoiGuiId = tv.NguoiDungId AND t.CuocTroChuyenId = tv.CuocTroChuyenId
-      WHERE t.CuocTroChuyenId = @convId ${extraWhere}
+      WHERE t.CuocTroChuyenId = @convId
       ORDER BY t.NgayGui ASC
     `);
       
