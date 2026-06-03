@@ -118,13 +118,20 @@ class SellerDashboardController {
           )
           SELECT 
             FORMAT(d.Date, 'yyyy-MM-dd') as date,
-            ISNULL(SUM(ctdh.SoLuong * ctdh.DonGia), 0) as revenue,
-            COUNT(DISTINCT ctdh.DonHangId) as orders
+            ISNULL(s.revenue, 0) as revenue,
+            ISNULL(s.orders, 0) as orders
           FROM Dates d
-          LEFT JOIN DonHang dh ON CAST(dh.NgayTao AS DATE) = d.Date AND dh.TrangThaiDon != N'Đã hủy'
-          LEFT JOIN ChiTietDonHang ctdh ON ctdh.DonHangId = dh.MaDonHang
-          LEFT JOIN SanPham sp ON ctdh.SanPhamId = sp.MaSanPham AND sp.CuaHangId = @storeId
-          GROUP BY d.Date
+          LEFT JOIN (
+            SELECT 
+              CAST(dh.NgayTao AS DATE) as Date,
+              SUM(ctdh.SoLuong * ctdh.DonGia) as revenue,
+              COUNT(DISTINCT ctdh.DonHangId) as orders
+            FROM DonHang dh
+            INNER JOIN ChiTietDonHang ctdh ON ctdh.DonHangId = dh.MaDonHang
+            INNER JOIN SanPham sp ON ctdh.SanPhamId = sp.MaSanPham
+            WHERE sp.CuaHangId = @storeId AND dh.TrangThaiDon != N'Đã hủy'
+            GROUP BY CAST(dh.NgayTao AS DATE)
+          ) s ON s.Date = d.Date
           ORDER BY d.Date
           OPTION (MAXRECURSION 366);
         `);
@@ -283,8 +290,12 @@ class SellerDashboardController {
             SELECT 2 UNION ALL
             SELECT 1
           ) stars
-          LEFT JOIN SanPham sp ON sp.CuaHangId = @storeId
-          LEFT JOIN DanhGiaSanPham dg ON dg.SanPhamId = sp.MaSanPham AND dg.SoSao = stars.Stars
+          LEFT JOIN (
+            SELECT dg.MaDanhGia, dg.SoSao
+            FROM DanhGiaSanPham dg
+            INNER JOIN SanPham sp ON dg.SanPhamId = sp.MaSanPham
+            WHERE sp.CuaHangId = @storeId
+          ) dg ON dg.SoSao = stars.Stars
           GROUP BY stars.Stars
           ORDER BY stars.Stars DESC;
         `);
