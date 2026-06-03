@@ -1,6 +1,7 @@
 import React from 'react';
 import { Store, MessageCircle } from 'lucide-react';
 import type { ProductDetailType } from '../../../pages/admin/ProductDetail';
+import { getStoreLogoUrl } from '../../../utils/image.utils';
 
 interface ProductShopInfoProps {
   product: ProductDetailType;
@@ -12,7 +13,7 @@ const ProductShopInfo: React.FC<ProductShopInfoProps> = ({ product, onContact })
     <div className="bg-surface rounded-xl shadow-sm border border-border-default p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
       <div className="flex items-center gap-4">
         {product.Logo ? (
-          <img src={product.Logo} alt={product.TenCuaHang} className="w-20 h-20 rounded-full object-cover border border-border-default shadow-sm" />
+          <img src={getStoreLogoUrl(product.Logo)} alt={product.TenCuaHang} className="w-20 h-20 rounded-full object-cover border border-border-default shadow-sm" />
         ) : (
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-3xl">{product.TenCuaHang.charAt(0)}</div>
         )}

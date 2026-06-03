@@ -4,8 +4,10 @@ import dayjs from 'dayjs';
 import { type Conversation, type ChatMessage } from '../../../services/chatAdmin.service';
 import ShareLinkModal from './ShareLinkModal';
 import AddMemberModal from './AddMemberModal';
-import { REPO_URL } from '../../../services/api';
+import ContactCardModal from './ContactCardModal';
+import { userService } from '../../../services/user.service';
 import { getUserFromStorage, isAdmin, isSeller } from '../../../utils/role.utils';
+import { getUserAvatarUrl, getMediaUrl } from '../../../utils/image.utils';
 
 interface ChatBoxProps {
   activeConversation: Conversation | null;
@@ -14,10 +16,11 @@ interface ChatBoxProps {
   onRecallMessage: (messageId: string) => void;
   onDeleteMessage: (messageId: string) => void;
   onDeleteGroup?: (groupId: string) => void;
+  onOpenConversation?: (conversationId: string) => void;
   isLoading: boolean;
 }
 
-const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage, onDeleteMessage, onDeleteGroup, isLoading }: ChatBoxProps) => {
+const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage, onDeleteMessage, onDeleteGroup, onOpenConversation, isLoading }: ChatBoxProps) => {
   const currentUser = getUserFromStorage();
   const [inputValue, setInputValue] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -27,8 +30,32 @@ const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage,
   const [showMessageMenuId, setShowMessageMenuId] = useState<string | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [contactUser, setContactUser] = useState<any | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleOpenContactCard = async (senderId: string, senderName: string, senderAvatar?: string | null) => {
+    try {
+      const res = await userService.getUserById(senderId);
+      const userData = res.data || {};
+      setContactUser({
+        userId: userData.userId || senderId,
+        fullName: userData.fullName || senderName,
+        avatar: userData.avatar || senderAvatar,
+        phone: userData.phone || null,
+        email: userData.email || null,
+        roleName: userData.roleName || null,
+        createdAt: userData.createdAt || null,
+        storeName: userData.storeName || null,
+        storeLogo: userData.storeLogo || null
+      });
+      setIsContactModalOpen(true);
+    } catch (e) {
+      setContactUser({ userId: senderId, fullName: senderName, avatar: senderAvatar });
+      setIsContactModalOpen(true);
+    }
+  };
 
   const handleShareLink = () => {
     setIsShareModalOpen(true);
@@ -102,7 +129,7 @@ const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage,
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-background border border-border-default flex items-center justify-center">
             {activeConversation.avatar ? (
-              <img src={activeConversation.avatar} alt={activeConversation.name} className="w-full h-full rounded-full object-cover" />
+              <img src={getUserAvatarUrl(activeConversation.avatar)} alt={activeConversation.name} className="w-full h-full rounded-full object-cover" />
             ) : (
               <span className="font-bold text-text-muted">{activeConversation.name.charAt(0)}</span>
             )}
@@ -124,18 +151,20 @@ const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage,
           </button>
           {showHeaderMenu && (
             <div className="absolute top-12 right-0 bg-surface border border-border-default shadow-lg rounded-xl w-56 z-50 overflow-hidden">
-              <button 
-                className="w-full text-left px-4 py-3 text-sm hover:bg-background transition-colors flex items-center justify-between"
-                onClick={() => {
-                  setShowHiddenMessages(!showHiddenMessages);
-                  setShowHeaderMenu(false);
-                }}
-              >
-                <span>Hiển thị tin nhắn đã ẩn</span>
-                <div className={`w-10 h-5 rounded-full flex items-center px-0.5 transition-colors border ${showHiddenMessages ? 'bg-primary border-primary' : 'bg-surface-hover border-border-default'}`}>
-                  <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform ${showHiddenMessages ? 'translate-x-5' : 'translate-x-0'}`} />
-                </div>
-              </button>
+              {isAdmin(currentUser) && (
+                <button 
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-background transition-colors flex items-center justify-between"
+                  onClick={() => {
+                    setShowHiddenMessages(!showHiddenMessages);
+                    setShowHeaderMenu(false);
+                  }}
+                >
+                  <span>Hiển thị tin nhắn đã ẩn</span>
+                  <div className={`w-10 h-5 rounded-full flex items-center px-0.5 transition-colors border ${showHiddenMessages ? 'bg-primary border-primary' : 'bg-surface-hover border-border-default'}`}>
+                    <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform ${showHiddenMessages ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </div>
+                </button>
+              )}
               
               {activeConversation.type === 'group' && (
                 <>
@@ -183,7 +212,7 @@ const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage,
           messages.map((msg, index) => {
             const showTime = index === 0 || dayjs(msg.timestamp).diff(dayjs(messages[index - 1].timestamp), 'minute') > 30;
             const canRecall = msg.isMe && dayjs().diff(dayjs(msg.timestamp), 'hour') < 24 && !msg.isRecalled;
-            const canDelete = true; // Admin có quyền xóa mọi tin nhắn
+            const canDelete = isAdmin(currentUser); // Chỉ Admin mới được xóa vĩnh viễn
 
             return (
               <div key={msg.id} className="flex flex-col">
@@ -203,12 +232,18 @@ const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage,
                     <div className="w-8 h-8 rounded-full bg-surface shrink-0 border border-border-default flex items-center justify-center overflow-hidden">
                       {msg.senderAvatar ? (
                         <img 
-                          src={msg.senderAvatar.startsWith('http') ? msg.senderAvatar : `${REPO_URL}${msg.senderAvatar}`} 
+                          src={getUserAvatarUrl(msg.senderAvatar)} 
                           alt={msg.senderName} 
-                          className="w-full h-full object-cover" 
+                          className="w-full h-full object-cover cursor-pointer" 
+                          onClick={() => handleOpenContactCard(msg.senderId, msg.senderName, msg.senderAvatar)}
                         />
                       ) : (
-                        <span className="text-xs font-bold text-text-muted">{msg.senderName.charAt(0)}</span>
+                        <span
+                          onClick={() => handleOpenContactCard(msg.senderId, msg.senderName, null)}
+                          className="text-xs font-bold text-text-muted cursor-pointer hover:text-primary transition-colors"
+                        >
+                          {msg.senderName.charAt(0)}
+                        </span>
                       )}
                     </div>
                   )}
@@ -256,7 +291,12 @@ const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage,
                   <div className={`flex flex-col ${msg.isMe ? 'items-end' : 'items-start'}`}>
                     {!msg.isMe && (
                       <div className="flex items-center gap-1 mb-1 ml-1">
-                        <span className="text-[11px] font-semibold text-text-main">{msg.senderName}</span>
+                        <span 
+                          className="text-[11px] font-semibold text-text-main cursor-pointer hover:text-primary hover:underline transition-colors"
+                          onClick={() => handleOpenContactCard(msg.senderId, msg.senderName, msg.senderAvatar)}
+                        >
+                          {msg.senderName}
+                        </span>
                         {activeConversation.type === 'group' && msg.senderRole && (
                           <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded text-xs">
                             {msg.senderRole === 'chu_nhom' ? 'Chủ nhóm' : 'Thành viên'}
@@ -292,11 +332,7 @@ const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage,
                           {msg.media && msg.media.length > 0 && (
                             <div className={`flex flex-wrap gap-2 ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
                               {msg.media.map((m, i) => {
-                                const mediaUrl = m.url.startsWith('http') 
-                                  ? m.url 
-                                  : m.url.startsWith('/') 
-                                    ? `${REPO_URL}${m.url}` 
-                                    : `${REPO_URL}/uploads/media/${m.url}`;
+                                const mediaUrl = getMediaUrl(m.url);
                                 
                                 return m.type === 'image' ? (
                                   <img key={i} src={mediaUrl} alt="media" className="max-w-[200px] max-h-[200px] rounded-xl object-cover cursor-pointer hover:opacity-90 shadow-sm border border-border-default" />
@@ -414,6 +450,15 @@ const ChatBox = ({ activeConversation, messages, onSendMessage, onRecallMessage,
           }} 
         />
       )}
+
+      <ContactCardModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        user={contactUser}
+        onContactCreated={(convId) => {
+          if (onOpenConversation) onOpenConversation(convId);
+        }}
+      />
     </div>
   );
 };

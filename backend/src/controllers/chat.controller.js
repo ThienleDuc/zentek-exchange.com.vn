@@ -1,4 +1,5 @@
 const chatService = require('../services/chat.service');
+const chatAdminService = require('../services/chatAdmin.service');
 
 class ChatController {
   async joinCommunity(req, res) {
@@ -66,6 +67,44 @@ class ChatController {
     } catch (error) {
       console.error('Lỗi khi tạo chat riêng tư:', error);
       res.status(500).json({ success: false, message: 'Lỗi server khi tạo chat riêng tư', error: error.message });
+    }
+  }
+
+  async findOrCreatePrivateChat(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { otherUserId } = req.body;
+
+      if (!otherUserId) return res.status(400).json({ success: false, message: 'Thiếu otherUserId' });
+
+      // 1. Kiểm tra tồn tại
+      const exists = await chatService.checkPrivateChatExists(userId, otherUserId);
+      if (exists.exists) {
+        return res.json({ success: true, data: { conversationId: exists.conversationId }, message: 'Cuộc trò chuyện đã tồn tại' });
+      }
+
+      // 2. Tạo cuộc trò chuyện mới
+      const convId = await chatService.createPrivateChat(userId, otherUserId);
+      return res.status(201).json({ success: true, data: { conversationId: convId }, message: 'Tạo cuộc trò chuyện thành công' });
+    } catch (error) {
+      console.error('Lỗi khi tìm/tao chat riêng tư:', error);
+      res.status(500).json({ success: false, message: error.message || 'Lỗi server' });
+    }
+  }
+
+  async recallMessage(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { msgId } = req.params;
+
+      if (!msgId) return res.status(400).json({ success: false, message: 'Thiếu msgId' });
+
+      // Delegate to existing service logic which validates ownership/time
+      await chatAdminService.recallMessage(msgId, userId);
+      res.json({ success: true, message: 'Thu hồi tin nhắn thành công' });
+    } catch (error) {
+      console.error('Lỗi khi thu hồi tin nhắn (user):', error);
+      res.status(400).json({ success: false, message: error.message || 'Lỗi server' });
     }
   }
 }

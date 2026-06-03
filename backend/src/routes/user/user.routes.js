@@ -8,7 +8,10 @@ const userController = require('../../controllers/user/user.controller');
 
 router.get('/stats', userController.getStats);
 router.get('/roles', userController.getRoles);
+router.get('/search', userController.searchContacts);
+router.get('/search-stores', userController.searchStores);
 router.get('/', userController.getUsers);
+router.get('/:id', userController.getUserById);
 router.post('/', userController.createUser);
 router.put('/:id', userController.updateUser);
 router.delete('/:id', userController.deleteUser);

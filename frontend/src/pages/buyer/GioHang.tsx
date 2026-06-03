@@ -4,6 +4,7 @@ import { Trash2, Minus, Plus, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { PATHS } from '../../utils/path.utils';
 import { cartService } from '../../services/cart.service';
 import { orderService } from '../../services/order.service';
+import { getProductImageUrl } from '../../utils/image.utils';
 
 interface CartItem {
   maChiTietGioHang: string;
@@ -206,7 +207,7 @@ const Cart: React.FC = () => {
                       />
                     </div>
                     <div className="cart-col-product">
-                      <img src={item.anh} alt={item.tenSanPham} className="cart-product-img" />
+                      <img src={getProductImageUrl(item.anh)} alt={item.tenSanPham} className="cart-product-img" />
                       <div className="cart-product-info">
                         <Link to={`/san-pham/${item.sanPhamId}`} className="cart-product-name">
                           {item.tenSanPham}

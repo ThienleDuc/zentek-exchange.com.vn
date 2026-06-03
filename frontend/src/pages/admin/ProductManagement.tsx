@@ -10,6 +10,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { isSeller } from '../../utils/role.utils';
 import { storage } from '../../utils/storage.utils';
 import ProductEditModal from '../../components/admin/ProductEditModal';
+import { getProductImageUrl } from '../../utils/image.utils';
 
 export interface Product {
   MaSanPham: string;
@@ -579,7 +580,7 @@ const ProductManagement = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           {p.HinhAnh ? (
-                            <img src={p.HinhAnh} alt={p.TieuDe} className="w-12 h-12 rounded object-cover border border-border-default" />
+                            <img src={getProductImageUrl(p.HinhAnh)} alt={p.TieuDe} className="w-12 h-12 rounded object-cover border border-border-default" />
                           ) : (
                             <div className="w-12 h-12 rounded bg-surface-muted border border-border-default flex items-center justify-center">
                               <Package className="w-6 h-6 text-text-muted" />

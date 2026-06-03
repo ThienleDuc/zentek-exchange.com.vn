@@ -18,4 +18,10 @@ router.get('/private-exists/:otherUserId', chatController.checkPrivateChatExists
 // Tạo chat riêng tư
 router.post('/private-create', chatController.createPrivateChat);
 
+// Tìm hoặc tạo cuộc trò chuyện riêng tư giữa 2 người (nếu đã có trả về id)
+router.post('/private-find-or-create', chatController.findOrCreatePrivateChat);
+
+// Thu hồi tin nhắn (chủ tin nhắn có thể thu hồi trong giới hạn thời gian)
+router.put('/messages/:msgId/recall', chatController.recallMessage);
+
 module.exports = router;

@@ -1,4 +1,5 @@
 const { sql, poolPromise } = require('../config/db');
+const { getFilenameOnly } = require('../utils/file.utils');
 
 class ProductService {
   async getProducts({ sortBy = 'best_seller', offset = 0, limit = 20 }) {
@@ -78,19 +79,23 @@ class ProductService {
       request.input('q', sql.NVarChar, `%${q}%`);
     }
 
+    let cteClause = '';
     if (category) {
-      whereClause += ` AND sp.DanhMucId IN (
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(category);
+      const categoryFilter = isUuid 
+        ? `MaDanhMuc = @category` 
+        : `TenDanhMuc = @category`;
+
+      cteClause = `
         WITH CategoryCTE AS (
           SELECT MaDanhMuc FROM DanhMuc 
-          WHERE MaDanhMuc = @category OR TenDanhMuc = @category
+          WHERE ${categoryFilter}
           UNION ALL
           SELECT dm.MaDanhMuc FROM DanhMuc dm
           INNER JOIN CategoryCTE c ON dm.DanhMucChaId = c.MaDanhMuc
         )
-        SELECT MaDanhMuc FROM CategoryCTE
-      )`;
-      // Check if category is a UUID or string
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(category);
+      `;
+      whereClause += ` AND sp.DanhMucId IN (SELECT MaDanhMuc FROM CategoryCTE)`;
       request.input('category', isUuid ? sql.UniqueIdentifier : sql.NVarChar, category);
     }
 
@@ -142,6 +147,7 @@ class ProductService {
     }
 
     const countQuery = `
+      ${cteClause}
       SELECT COUNT(DISTINCT sp.MaSanPham) as total
       FROM SanPham sp
       JOIN CuaHang ch ON sp.CuaHangId = ch.MaCuaHang
@@ -152,6 +158,7 @@ class ProductService {
     const total = countResult.recordset[0].total;
 
     const dataQuery = `
+      ${cteClause}
       SELECT 
         sp.MaSanPham, sp.TieuDe, sp.Gia, sp.SoLuongDaBan, sp.DiemDanhGia, sp.TinhTrang, sp.DaHetHang, sp.NgayDang, sp.DanhMucId as MaDanhMuc, sp.CuaHangId as MaCuaHang,
         ch.TenCuaHang,
@@ -538,7 +545,7 @@ class ProductService {
           const insertImg = new sql.Request(transaction);
           const imgResult = await insertImg
             .input('productId', sql.UniqueIdentifier, productId)
-            .input('url', sql.VarChar, img.url)
+            .input('url', sql.VarChar, getFilenameOnly(img.url))
             .input('isMain', sql.Bit, img.isMain ? 1 : 0)
             .query(`
               INSERT INTO AnhSanPham (MaHinhAnh, SanPhamId, DuongDanAnh, LaAnhChinh, NgayTao)
@@ -679,7 +686,7 @@ class ProductService {
             // Insert new image
             const imgResult = await new sql.Request(transaction)
               .input('productId', sql.UniqueIdentifier, productId)
-              .input('url', sql.VarChar, img.url)
+              .input('url', sql.VarChar, getFilenameOnly(img.url))
               .input('isMain', sql.Bit, img.isMain ? 1 : 0)
               .query(`
                 INSERT INTO AnhSanPham (MaHinhAnh, SanPhamId, DuongDanAnh, LaAnhChinh, NgayTao)

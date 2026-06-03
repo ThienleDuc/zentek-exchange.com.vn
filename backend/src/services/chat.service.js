@@ -1,8 +1,7 @@
-const { sql, poolPromise } = require('../config/db');
+const chatRepository = require('../repositories/chat/chat.repository');
 
 class ChatService {
   async joinCommunityGroup(userId, role) {
-    const pool = await poolPromise;
     let groupName = '';
 
     if (role === 'Buyer') {
@@ -14,113 +13,69 @@ class ChatService {
     }
 
     // 1. Tìm nhóm chat
-    const findGroup = await pool.request()
-      .input('groupName', sql.NVarChar(255), groupName)
-      .query(`SELECT MaCuocTroChuyen FROM CuocTroChuyen WHERE TenCuocTroChuyen = @groupName AND Loai = 'nhom'`);
-
-    if (findGroup.recordset.length === 0) {
+    const group = await chatRepository.findGroupByName(groupName);
+    if (!group) {
       throw new Error('Không tìm thấy nhóm cộng đồng. Vui lòng liên hệ Admin.');
     }
 
-    const groupId = findGroup.recordset[0].MaCuocTroChuyen;
+    const groupId = group.MaCuocTroChuyen;
 
     // 2. Kiểm tra xem user đã tham gia chưa
-    const checkMembership = await pool.request()
-      .input('groupId', sql.UniqueIdentifier, groupId)
-      .input('userId', sql.UniqueIdentifier, userId)
-      .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @groupId AND NguoiDungId = @userId`);
-
-    if (checkMembership.recordset.length > 0) {
+    const isAlreadyMember = await chatRepository.isMember(groupId, userId);
+    if (isAlreadyMember) {
       return { message: 'Bạn đã tham gia nhóm này rồi', groupId };
     }
 
     // 3. Thêm user vào nhóm
-    await pool.request()
-      .input('groupId', sql.UniqueIdentifier, groupId)
-      .input('userId', sql.UniqueIdentifier, userId)
-      .input('role', sql.VarChar(50), 'thanh_vien')
-      .query(`
-        INSERT INTO ThanhVienCuocTroChuyen (CuocTroChuyenId, NguoiDungId, VaiTro)
-        VALUES (@groupId, @userId, @role)
-      `);
+    await chatRepository.addMember(groupId, userId, 'thanh_vien');
 
     return { message: 'Tham gia cộng đồng thành công', groupId };
   }
 
   async joinGroup(userId, groupId) {
-    const pool = await poolPromise;
-
-    // 1. Kiểm tra xem nhóm chat có tồn tại không và có phải là Loai = 'nhom' không
-    const findGroup = await pool.request()
-      .input('groupId', sql.UniqueIdentifier, groupId)
-      .query(`SELECT TenCuocTroChuyen FROM CuocTroChuyen WHERE MaCuocTroChuyen = @groupId AND Loai = 'nhom'`);
-
-    if (findGroup.recordset.length === 0) {
+    // 1. Kiểm tra xem nhóm chat có tồn tại không
+    const group = await chatRepository.findGroupById(groupId);
+    if (!group) {
       throw new Error('Nhóm trò chuyện không tồn tại hoặc không hợp lệ');
     }
 
     // 2. Kiểm tra xem user đã tham gia chưa
-    const checkMembership = await pool.request()
-      .input('groupId', sql.UniqueIdentifier, groupId)
-      .input('userId', sql.UniqueIdentifier, userId)
-      .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @groupId AND NguoiDungId = @userId`);
-
-    if (checkMembership.recordset.length > 0) {
+    const isAlreadyMember = await chatRepository.isMember(groupId, userId);
+    if (isAlreadyMember) {
       return { message: 'Bạn đã tham gia nhóm này rồi', groupId };
     }
 
     // 3. Thêm user vào nhóm
-    await pool.request()
-      .input('groupId', sql.UniqueIdentifier, groupId)
-      .input('userId', sql.UniqueIdentifier, userId)
-      .input('role', sql.VarChar(50), 'thanh_vien')
-      .query(`
-        INSERT INTO ThanhVienCuocTroChuyen (CuocTroChuyenId, NguoiDungId, VaiTro)
-        VALUES (@groupId, @userId, @role)
-      `);
+    await chatRepository.addMember(groupId, userId, 'thanh_vien');
 
     return { message: 'Tham gia nhóm thành công', groupId };
   }
 
   async checkPrivateChatExists(userId, otherUserId) {
-    const pool = await poolPromise;
-    const result = await pool.request()
-      .input('userId', sql.UniqueIdentifier, userId)
-      .input('otherUserId', sql.UniqueIdentifier, otherUserId)
-      .query(`
-        SELECT tv1.CuocTroChuyenId AS conversationId
-        FROM ThanhVienCuocTroChuyen tv1
-        JOIN ThanhVienCuocTroChuyen tv2 ON tv1.CuocTroChuyenId = tv2.CuocTroChuyenId
-        JOIN CuocTroChuyen c ON tv1.CuocTroChuyenId = c.MaCuocTroChuyen
-        WHERE c.Loai = 'ca_nhan'
-          AND tv1.NguoiDungId = @userId
-          AND tv2.NguoiDungId = @otherUserId
-      `);
-
-    if (result.recordset.length > 0) {
-      return { exists: true, conversationId: result.recordset[0].conversationId };
+    const conversationId = await chatRepository.findPrivateChat(userId, otherUserId);
+    if (conversationId) {
+      return { exists: true, conversationId };
     }
     return { exists: false, conversationId: null };
   }
 
   async createPrivateChat(userId, otherUserId) {
-    const pool = await poolPromise;
-    const transaction = new sql.Transaction(pool);
+    const { poolPromise: pool, sql } = require('../config/db');
+    const db = await pool;
+    const transaction = new sql.Transaction(db);
     await transaction.begin();
 
     try {
-      // 1. Insert CuocTroChuyen
-      const chatRequest = new sql.Request(transaction);
-      const chatResult = await chatRequest
-        .query(`
-          INSERT INTO CuocTroChuyen (Loai, NgayTao, NgayCapNhat)
-          OUTPUT INSERTED.MaCuocTroChuyen
-          VALUES ('ca_nhan', GETDATE(), GETDATE())
-        `);
-
+      // 1. Tạo cuộc trò chuyện
+      const convRequest = new sql.Request(transaction);
+      const chatResult = await convRequest.query(`
+        INSERT INTO CuocTroChuyen (Loai, NgayTao, NgayCapNhat)
+        OUTPUT INSERTED.MaCuocTroChuyen
+        VALUES ('ca_nhan', GETDATE(), GETDATE())
+      `);
       const conversationId = chatResult.recordset[0].MaCuocTroChuyen;
 
-      // 2. Add userId member
+      // 2. Thêm userId
       const member1Request = new sql.Request(transaction);
       await member1Request
         .input('conversationId', sql.UniqueIdentifier, conversationId)
@@ -130,7 +85,7 @@ class ChatService {
           VALUES (@conversationId, @userId, 'thanh_vien')
         `);
 
-      // 3. Add otherUserId member
+      // 3. Thêm otherUserId
       const member2Request = new sql.Request(transaction);
       await member2Request
         .input('conversationId', sql.UniqueIdentifier, conversationId)

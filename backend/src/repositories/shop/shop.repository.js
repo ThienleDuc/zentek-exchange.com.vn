@@ -1,4 +1,5 @@
 const { sql, poolPromise } = require('../../config/db');
+const { getFilenameOnly } = require('../../utils/file.utils');
 
 class ShopRepository {
   /**
@@ -14,7 +15,7 @@ class ShopRepository {
       request.input('NguoiBanId', sql.UniqueIdentifier, shopData.sellerId);
       request.input('TenCuaHang', sql.NVarChar(50), shopData.shopName);
       request.input('MoTa', sql.NVarChar(500), shopData.description || null);
-      request.input('Logo', sql.VarChar(255), shopData.logo || null);
+      request.input('Logo', sql.VarChar(255), getFilenameOnly(shopData.logo) || null);
       request.input('DiaChi', sql.NVarChar(300), shopData.address);
       request.input('PhuongXa', sql.NVarChar(100), shopData.ward);
       request.input('QuanHuyen', sql.NVarChar(100), shopData.district);
@@ -22,7 +23,7 @@ class ShopRepository {
       request.input('SoDienThoai', sql.Char(10), shopData.shopPhone);
       request.input('LoaiHinhCuaHang', sql.TinyInt, shopData.shopType || 1);
       request.input('MaSoThue', sql.NVarChar(20), shopData.taxCode || '');
-      request.input('PdfGiayPhep', sql.VarChar(255), shopData.licensePdf || null);
+      request.input('PdfGiayPhep', sql.VarChar(255), getFilenameOnly(shopData.licensePdf) || null);
       request.input('DaXacThucPhapLy', sql.Bit, 0); // Mặc định chưa xác thực
       request.input('TrangThai', sql.Bit, 1); // Mặc định hoạt động
 
@@ -112,7 +113,7 @@ class ShopRepository {
       userReq.input('HoTen', sql.NVarChar(100), userPayload.hoTen);
       userReq.input('Email', sql.VarChar(100), userPayload.email);
       userReq.input('SoDienThoai', sql.Char(10), userPayload.soDienThoai ? userPayload.soDienThoai.trim() : null);
-      userReq.input('AnhDaiDien', sql.VarChar(sql.MAX), userPayload.anhDaiDien || null);
+      userReq.input('AnhDaiDien', sql.VarChar(sql.MAX), getFilenameOnly(userPayload.anhDaiDien) || null);
 
       await userReq.query(`
         UPDATE NguoiDung
@@ -125,7 +126,7 @@ class ShopRepository {
       shopReq.input('SellerId', sql.UniqueIdentifier, sellerId);
       shopReq.input('TenCuaHang', sql.NVarChar(50), shopPayload.tenCuaHang);
       shopReq.input('MoTa', sql.NVarChar(500), shopPayload.moTa || null);
-      shopReq.input('Logo', sql.VarChar(255), shopPayload.logo || null);
+      shopReq.input('Logo', sql.VarChar(255), getFilenameOnly(shopPayload.logo) || null);
       shopReq.input('DiaChi', sql.NVarChar(300), shopPayload.diaChi);
       shopReq.input('PhuongXa', sql.NVarChar(100), shopPayload.phuongXa);
       shopReq.input('QuanHuyen', sql.NVarChar(100), shopPayload.quanHuyen);

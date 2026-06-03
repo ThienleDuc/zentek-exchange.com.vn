@@ -27,6 +27,7 @@ export const cartService = {
       PhanLoaiId: classificationId,
       SoLuong: quantity
     });
+    window.dispatchEvent(new Event('cart-updated'));
     return response.data;
   },
 
@@ -36,12 +37,14 @@ export const cartService = {
       itemId,
       newQuantity
     });
+    window.dispatchEvent(new Event('cart-updated'));
     return response.data;
   },
 
   // Remove item from cart
   removeItem: async (itemId: string) => {
     const response = await api.delete(`/cart/remove/${itemId}`);
+    window.dispatchEvent(new Event('cart-updated'));
     return response.data;
   }
 };

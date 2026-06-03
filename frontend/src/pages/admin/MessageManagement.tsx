@@ -1,11 +1,10 @@
-// import removed
-
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import ChatSidebar from '../../components/admin/chat/ChatSidebar';
 import ChatBox from '../../components/admin/chat/ChatBox';
 import CreateGroupModal from '../../components/admin/chat/CreateGroupModal';
 import JoinGroupModal from '../../components/admin/chat/JoinGroupModal';
+import ContactSearchModal from '../../components/admin/chat/ContactSearchModal';
 import { chatAdminService, type Conversation, type ChatMessage } from '../../services/chatAdmin.service';
 import { chatService } from '../../services/chat.service';
 import { getUserFromStorage, isBuyer } from '../../utils/role.utils';
@@ -23,6 +22,7 @@ const MessageManagement = () => {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isJoinGroupModalOpen, setIsJoinGroupModalOpen] = useState(false);
+  const [isContactSearchOpen, setIsContactSearchOpen] = useState(false);
 
   // Lấy danh sách trò chuyện
   const fetchConversations = async () => {
@@ -120,6 +120,10 @@ const MessageManagement = () => {
         try {
           const data = await chatAdminService.getMessages(activeChatId);
           setMessages(data);
+          // Re-fetch conversations to update unread count on sidebar list in place
+          fetchConversations();
+          // Dispatch custom event to notify Header and main sidebar icons to refresh badges
+          window.dispatchEvent(new CustomEvent('chat-updated'));
         } catch (error) {
           console.error('Lỗi khi tải tin nhắn:', error);
         } finally {
@@ -195,6 +199,7 @@ const MessageManagement = () => {
         onChangeSearch={setSearchQuery}
         onOpenCreateGroup={() => setIsCreateGroupModalOpen(true)}
         onOpenJoinGroup={() => setIsJoinGroupModalOpen(true)}
+        onOpenContactSearch={() => setIsContactSearchOpen(true)}
       />
       <ChatBox 
         activeConversation={activeConversation}
@@ -203,6 +208,10 @@ const MessageManagement = () => {
         onRecallMessage={handleRecallMessage}
         onDeleteMessage={handleDeleteMessage}
         onDeleteGroup={handleDeleteGroup}
+        onOpenConversation={(id) => {
+          setActiveChatId(id);
+          fetchConversations();
+        }}
         isLoading={isLoadingMessages}
       />
       <CreateGroupModal 
@@ -220,6 +229,11 @@ const MessageManagement = () => {
           fetchConversations();
           setActiveChatId(groupId);
         }}
+      />
+      <ContactSearchModal
+        isOpen={isContactSearchOpen}
+        onClose={() => setIsContactSearchOpen(false)}
+        onContactCreated={(convId: string) => { setActiveChatId(convId); fetchConversations(); setIsContactSearchOpen(false); }}
       />
     </div>
   );

@@ -1,4 +1,5 @@
 const { sql, poolPromise } = require('../../config/db');
+const { getFilenameOnly } = require('../../utils/file.utils');
 
 class UserRepository {
   /**
@@ -303,14 +304,91 @@ class UserRepository {
             nd.AnhDaiDien, 
             nd.NgayTao, 
             nd.NgayCapNhat, 
-            vt.TenVaiTro AS roleName
+            vt.TenVaiTro AS roleName,
+            ch.MaCuaHang AS storeId,
+            ch.TenCuaHang AS storeName,
+            ch.Logo AS storeLogo
           FROM NguoiDung nd
           INNER JOIN VaiTro vt ON nd.VaiTroId = vt.MaVaiTro
+          LEFT JOIN CuaHang ch ON nd.MaNguoiDung = ch.NguoiBanId
           WHERE nd.MaNguoiDung = @Id AND nd.DaXoa = 0
         `);
       return result.recordset[0] || null;
     } catch (error) {
       console.error('Error in UserRepository.getUserById:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Tìm kiếm người dùng theo query (email, phone hoặc tên) và trả về thông tin kèm cửa hàng nếu có
+   * @param {string} q
+   */
+  async searchContacts(q) {
+    try {
+      const pool = await poolPromise;
+      const request = pool.request();
+      request.input('likeQ', sql.NVarChar(200), `%${q}%`);
+
+      const result = await request.query(`
+        SELECT 
+          n.MaNguoiDung AS userId,
+          n.HoTen AS fullName,
+          n.Email,
+          n.SoDienThoai AS phone,
+          n.AnhDaiDien AS avatar,
+          vt.TenVaiTro AS roleName,
+          n.NgayTao AS createdAt,
+          ch.MaCuaHang AS storeId,
+          ch.TenCuaHang AS storeName,
+          ch.Logo AS storeLogo
+        FROM NguoiDung n
+        INNER JOIN VaiTro vt ON n.VaiTroId = vt.MaVaiTro
+        LEFT JOIN CuaHang ch ON n.MaNguoiDung = ch.NguoiBanId
+        WHERE n.DaXoa = 0 AND (
+          n.SoDienThoai LIKE @likeQ OR n.Email LIKE @likeQ OR n.HoTen LIKE @likeQ
+        )
+      `);
+
+      return result.recordset;
+    } catch (error) {
+      console.error('Error in UserRepository.searchContacts:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Tìm kiếm cửa hàng theo query (tên cửa hàng hoặc số điện thoại)
+   * @param {string} q
+   */
+  async searchStores(q) {
+    try {
+      const pool = await poolPromise;
+      const request = pool.request();
+      request.input('likeQ', sql.NVarChar(200), `%${q}%`);
+
+      const result = await request.query(`
+        SELECT 
+          ch.MaCuaHang AS storeId,
+          ch.TenCuaHang AS storeName,
+          ch.Logo AS storeLogo,
+          ch.MoTa AS storeDescription,
+          ch.SoDienThoai AS storePhone,
+          n.Email AS storeEmail,
+          ch.DiaChi AS storeAddress,
+          n.MaNguoiDung AS userId,
+          n.HoTen AS fullName,
+          n.AnhDaiDien AS avatar
+        FROM CuaHang ch
+        INNER JOIN NguoiDung n ON ch.NguoiBanId = n.MaNguoiDung
+        WHERE ch.TrangThai = 1 AND (
+          ch.TenCuaHang LIKE @likeQ OR ch.SoDienThoai LIKE @likeQ
+        )
+      `);
+
+      return result.recordset;
+    } catch (error) {
+      console.error('Error in UserRepository.searchStores:', error);
       throw error;
     }
   }
@@ -326,7 +404,7 @@ class UserRepository {
         .input('HoTen', sql.NVarChar(100), fullName)
         .input('SoDienThoai', sql.Char(10), phone ? phone.trim() : null)
         .input('Email', sql.VarChar(100), email)
-        .input('AnhDaiDien', sql.VarChar(sql.MAX), avatarUrl || null)
+        .input('AnhDaiDien', sql.VarChar(sql.MAX), getFilenameOnly(avatarUrl) || null)
         .query(`
           UPDATE NguoiDung
           SET HoTen = @HoTen, SoDienThoai = @SoDienThoai, Email = @Email, AnhDaiDien = @AnhDaiDien, NgayCapNhat = GETDATE()

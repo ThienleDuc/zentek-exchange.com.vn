@@ -43,6 +43,10 @@ router.use('/admin/products', productAdminRoutes);
 const chatAdminRoutes = require('./admin/chatAdmin.routes');
 router.use('/admin/chats', chatAdminRoutes);
 
+// Đăng ký nhánh định tuyến /admin/stats (Thống kê cho Admin)
+const statsAdminRoutes = require('./admin/statsAdmin.routes');
+router.use('/admin/stats', statsAdminRoutes);
+
 // Đăng ký nhánh định tuyến /chats (Quản lý tin nhắn cho User)
 const chatRoutes = require('./chat/chat.routes');
 router.use('/chats', chatRoutes);

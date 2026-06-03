@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, Plus, UserPlus } from 'lucide-react';
 import { userAdminService, type User } from '../../../services/userAdmin.service';
 import { chatAdminService } from '../../../services/chatAdmin.service';
+import { getUserAvatarUrl } from '../../../utils/image.utils';
 
 interface AddMemberModalProps {
   isOpen: boolean;
@@ -119,7 +120,7 @@ const AddMemberModal: React.FC<AddMemberModalProps> = ({ isOpen, onClose, groupI
                     <div key={user.id} className="flex items-center justify-between p-3 border-b border-border-default/50 hover:bg-background cursor-pointer" onClick={() => handleSelectUser(user)}>
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                          {user.avatar ? <img src={user.avatar} alt="avatar" className="w-full h-full rounded-full object-cover"/> : user.fullName.charAt(0)}
+                          {user.avatar ? <img src={getUserAvatarUrl(user.avatar)} alt="avatar" className="w-full h-full rounded-full object-cover"/> : user.fullName.charAt(0)}
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-text-main">{user.fullName}</p>

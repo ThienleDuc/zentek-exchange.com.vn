@@ -69,52 +69,35 @@ const RegisterSeller: React.FC = () => {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const [allDistrictsOfProvince, setAllDistrictsOfProvince] = useState<any[]>([]);
-
   const handleProvinceChange = async (val: string | number) => {
     const provinceCode = Number(val);
     const provinceName = provinces.find(p => p.code === provinceCode)?.name || '';
     setFormData(prev => ({ ...prev, province: provinceName, district: '', ward: '' }));
-    setSelectedLocation(prev => ({ ...prev, provinceCode, districtCode: 0, wardCode: 0 }));
+    setSelectedLocation({ provinceCode, districtCode: 0, wardCode: 0 });
     setDistricts([]);
     setWards([]);
-    setAllDistrictsOfProvince([]);
     if (provinceCode) {
       const tree = await getProvinceTree(provinceCode);
       if (tree) {
-        setAllDistrictsOfProvince(tree.districts || []);
-        const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
-          ...w,
-          district_code: d.code
-        })));
-        setWards(flatWards);
-      }
-    }
-  };
-
-  const handleWardChange = (val: string | number) => {
-    const wardCode = Number(val);
-    const ward = wards.find(w => w.code === wardCode) as any;
-    const wardName = ward?.name || '';
-    setFormData(prev => ({ ...prev, ward: wardName, district: '' }));
-    setSelectedLocation(prev => ({ ...prev, wardCode, districtCode: 0 }));
-    setDistricts([]);
-    if (ward) {
-      const distCode = ward.district_code;
-      const matchingDist = allDistrictsOfProvince.find(d => d.code === distCode);
-      if (matchingDist) {
-        setDistricts([matchingDist]);
-        setFormData(prev => ({ ...prev, district: matchingDist.name }));
-        setSelectedLocation(prev => ({ ...prev, districtCode: matchingDist.code }));
+        setDistricts(tree.districts || []);
       }
     }
   };
 
   const handleDistrictChange = (val: string | number) => {
     const districtCode = Number(val);
-    const districtName = districts.find(d => d.code === districtCode)?.name || '';
-    setFormData(prev => ({ ...prev, district: districtName }));
-    setSelectedLocation(prev => ({ ...prev, districtCode }));
+    const district = districts.find(d => d.code === districtCode) as any;
+    const districtName = district?.name || '';
+    setFormData(prev => ({ ...prev, district: districtName, ward: '' }));
+    setSelectedLocation(prev => ({ ...prev, districtCode, wardCode: 0 }));
+    setWards(district ? district.wards || [] : []);
+  };
+
+  const handleWardChange = (val: string | number) => {
+    const wardCode = Number(val);
+    const wardName = wards.find(w => w.code === wardCode)?.name || '';
+    setFormData(prev => ({ ...prev, ward: wardName }));
+    setSelectedLocation(prev => ({ ...prev, wardCode }));
   };
 
   const validateField = (name: string, value: any) => {
@@ -517,18 +500,6 @@ const RegisterSeller: React.FC = () => {
                     error={!!errors.province}
                   />
                 </fieldset>
-                
-                <fieldset className="register-field border-none p-0 m-0 mb-4">
-                  <label className="register-label">Phường / Xã *</label>
-                  <SearchableDropdown
-                    options={wards.map(w => ({ value: w.code, label: w.name }))}
-                    value={selectedLocation.wardCode}
-                    onChange={handleWardChange}
-                    placeholder="Chọn Phường/Xã"
-                    disabled={isLoading || !formData.province}
-                    error={!!errors.ward}
-                  />
-                </fieldset>
 
                 <fieldset className="register-field border-none p-0 m-0 mb-4">
                   <label className="register-label">Quận / Huyện *</label>
@@ -537,8 +508,20 @@ const RegisterSeller: React.FC = () => {
                     value={selectedLocation.districtCode}
                     onChange={handleDistrictChange}
                     placeholder="Chọn Quận/Huyện"
-                    disabled={isLoading || !formData.ward}
+                    disabled={isLoading || !selectedLocation.provinceCode}
                     error={!!errors.district}
+                  />
+                </fieldset>
+                
+                <fieldset className="register-field border-none p-0 m-0 mb-4">
+                  <label className="register-label">Phường / Xã *</label>
+                  <SearchableDropdown
+                    options={wards.map(w => ({ value: w.code, label: w.name }))}
+                    value={selectedLocation.wardCode}
+                    onChange={handleWardChange}
+                    placeholder="Chọn Phường/Xã"
+                    disabled={isLoading || !selectedLocation.districtCode}
+                    error={!!errors.ward}
                   />
                 </fieldset>
                 

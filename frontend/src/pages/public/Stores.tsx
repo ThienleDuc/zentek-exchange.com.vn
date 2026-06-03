@@ -3,7 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Star, Store as StoreIcon, Package, TrendingUp, CheckCircle, MapPin } from 'lucide-react';
 import { storeService } from '../../services/store.service';
-import { SERVER_URL } from '../../services/api';
+import { getStoreLogoUrl } from '../../utils/image.utils';
 import SearchableDropdown from '../../components/SearchableDropdown';
 import { getProvinces, getDistricts, getWards, type Province, type District, type Ward } from '../../services/location.service';
 import PaginationProduct from '../../components/common/PaginationProduct';
@@ -402,11 +402,6 @@ const Stores: React.FC = () => {
     setWards([]);
   };
 
-  const getLogoUrl = (path: string | null) => {
-    if (!path) return '';
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    return `${SERVER_URL}${path}`;
-  };
   
   const totalPages = Math.ceil(total / limit);
   
@@ -506,7 +501,7 @@ const Stores: React.FC = () => {
                 >
                   <div className="store-logo">
                     {store.Logo ? (
-                      <img src={getLogoUrl(store.Logo)} alt={store.TenCuaHang} loading="lazy" />
+                       <img src={getStoreLogoUrl(store.Logo)} alt={store.TenCuaHang} loading="lazy" />
                     ) : (
                       <div className="logo-placeholder"><StoreIcon size={32} /></div>
                     )}

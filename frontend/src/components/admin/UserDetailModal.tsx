@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, KeyRound, Loader2, CheckCircle2, User } from 'lucide-react';
 import api from '../../services/api';
+import { getUserAvatarUrl } from '../../utils/image.utils';
 
 // Extract API base URL to construct image paths
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -56,9 +57,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
     }
   };
 
-  const avatarUrl = user.AnhDaiDien 
-    ? (user.AnhDaiDien.startsWith('http') ? user.AnhDaiDien : `${SERVER_URL}${user.AnhDaiDien}`)
-    : `${SERVER_URL}/uploads/avatar-default.svg`;
+  const avatarUrl = getUserAvatarUrl(user.AnhDaiDien) || `${SERVER_URL}/uploads/avatar-default.svg`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">

@@ -1,5 +1,6 @@
 const { sql, poolPromise } = require('../config/db');
 const tempOrderCache = require('../utils/tempOrderCache');
+const { getFilenameOnly } = require('../utils/file.utils');
 
 class OrderController {
   // Place a new order
@@ -831,7 +832,7 @@ class OrderController {
             .input('OrderId', sql.UniqueIdentifier, orderId)
             .input('SoSao', sql.TinyInt, soSao)
             .input('NoiDung', sql.NVarChar, noiDung || null)
-            .input('DuongDanVideo', sql.VarChar, duongDanVideo || null)
+            .input('DuongDanVideo', sql.VarChar, getFilenameOnly(duongDanVideo) || null)
             .query(`
               DECLARE @OutputTable TABLE (MaDanhGia UNIQUEIDENTIFIER);
               INSERT INTO DanhGiaSanPham (SanPhamId, NguoiMuaId, DonHangId, SoSao, NoiDung, DuongDanVideo, NgayTao, NgayCapNhat)
@@ -850,7 +851,7 @@ class OrderController {
                 const insertImg = new sql.Request(transaction);
                 await insertImg
                   .input('DanhGiaId', sql.UniqueIdentifier, newReviewId)
-                  .input('DuongDanMedia', sql.VarChar, imgUrl)
+                  .input('DuongDanMedia', sql.VarChar, getFilenameOnly(imgUrl))
                   .query(`
                     INSERT INTO PhanHoiMedia (MaPhanHoi, DanhGiaId, LoaiPhanHoi, LoaiMedia, DuongDanMedia, NgayTao)
                     VALUES (NEWID(), @DanhGiaId, N'danh_gia', N'anh', @DuongDanMedia, GETDATE())

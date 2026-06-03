@@ -33,7 +33,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="p-2 rounded-lg border border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="p-2.5 rounded-xl border border-default bg-surface text-text-body hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 shadow-sm flex items-center justify-center hover:scale-105 active:scale-95 cursor-pointer disabled:pointer-events-none"
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
@@ -43,12 +43,12 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
           key={index}
           onClick={() => typeof page === 'number' && onPageChange(page)}
           disabled={typeof page !== 'number'}
-          className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors flex items-center justify-center ${
+          className={`w-10 h-10 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center cursor-pointer ${
             currentPage === page
-              ? 'bg-blue-600 text-white border border-blue-500'
+              ? 'bg-primary text-white border border-primary hover:bg-primary-hover shadow-md shadow-primary/20 scale-105'
               : typeof page === 'number'
-              ? 'border border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700'
-              : 'text-gray-500 cursor-default'
+              ? 'border border-default bg-surface text-text-body hover:bg-surface-muted hover:scale-105 active:scale-95 shadow-sm'
+              : 'text-text-light cursor-default border-none bg-transparent shadow-none'
           }`}
         >
           {page}
@@ -58,7 +58,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="p-2 rounded-lg border border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="p-2.5 rounded-xl border border-default bg-surface text-text-body hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 shadow-sm flex items-center justify-center hover:scale-105 active:scale-95 cursor-pointer disabled:pointer-events-none"
       >
         <ChevronRight className="w-5 h-5" />
       </button>

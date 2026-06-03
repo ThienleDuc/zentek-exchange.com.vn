@@ -4,6 +4,7 @@ import { type Conversation } from '../../../services/chatAdmin.service';
 import { chatService } from '../../../services/chat.service';
 import { getUserFromStorage, isBuyer, isSeller, isAdmin } from '../../../utils/role.utils';
 import dayjs from 'dayjs';
+import { getUserAvatarUrl } from '../../../utils/image.utils';
 import { useState, useRef, useEffect } from 'react';
 
 type FilterType = 'all' | 'individual' | 'group' | 'store';
@@ -18,6 +19,7 @@ interface ChatSidebarProps {
   onChangeSearch: (q: string) => void;
   onOpenCreateGroup: () => void;
   onOpenJoinGroup: () => void;
+  onOpenContactSearch?: () => void;
 }
 
 const ChatSidebar = ({
@@ -29,7 +31,8 @@ const ChatSidebar = ({
   searchQuery,
   onChangeSearch,
   onOpenCreateGroup,
-  onOpenJoinGroup
+  onOpenJoinGroup,
+  onOpenContactSearch,
 }: ChatSidebarProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -60,8 +63,8 @@ const ChatSidebar = ({
       if (res.success) {
         setLocalJoined(true);
         alert(res.message);
-        // Reload trang để cập nhật lại danh sách bên trái một cách đơn giản
-        window.location.reload();
+        // Không cần reload - setLocalJoined(true) đã ẩn card gợi ý.
+        // Danh sách cuộc trò chuyện sẽ cập nhật khi component mount lại.
       }
     } catch (error: any) {
       alert(error?.response?.data?.message || 'Có lỗi xảy ra khi tham gia');
@@ -150,6 +153,16 @@ const ChatSidebar = ({
                 >
                   <Link2 size={16} className="text-primary" />
                   <span>Tham gia nhóm bằng link</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onOpenContactSearch && onOpenContactSearch();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-surface-hover flex items-center gap-3 text-sm text-text-main transition-colors"
+                >
+                  <Search size={16} className="text-primary" />
+                  <span>Tìm danh thiếp</span>
                 </button>
                 <button className="w-full text-left px-4 py-2 hover:bg-surface-hover flex items-center gap-3 text-sm text-text-main transition-colors opacity-70">
                   <CheckSquare size={16} className="text-success" />
@@ -263,7 +276,7 @@ const ChatSidebar = ({
             >
               <div className="relative w-12 h-12 rounded-full bg-background flex items-center justify-center shrink-0 border border-border-default text-text-muted">
                 {conv.avatar ? (
-                  <img src={conv.avatar} alt={conv.name} className="w-full h-full rounded-full object-cover" />
+                  <img src={getUserAvatarUrl(conv.avatar)} alt={conv.name} className="w-full h-full rounded-full object-cover" />
                 ) : (
                   getIcon(conv.type)
                 )}

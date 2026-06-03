@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Star, X } from 'lucide-react';
 import type { ProductDetailType } from '../../../pages/admin/ProductDetail';
 import productSellerService from '../../../services/productSeller.service';
+import { getMediaUrl } from '../../../utils/image.utils';
 
 interface ProductReviewsProps {
   product: ProductDetailType;
@@ -153,15 +154,15 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ product, currentUserId,
                         <div className="flex flex-wrap gap-2 mt-3">
                           {r.DuongDanVideo && (
                             <video
-                              src={r.DuongDanVideo}
+                              src={getMediaUrl(r.DuongDanVideo)}
                               controls
                               className="w-16 h-16 rounded border border-border-default object-cover animate-in fade-in"
                             />
                           )}
                           {r.media && r.media.map((m: any) => m.LoaiMedia === 'video' ? (
-                            <video key={m.MaPhanHoi} src={m.DuongDanMedia} controls className="w-16 h-16 rounded border border-border-default object-cover" />
+                            <video key={m.MaPhanHoi} src={getMediaUrl(m.DuongDanMedia)} controls className="w-16 h-16 rounded border border-border-default object-cover" />
                           ) : (
-                            <img key={m.MaPhanHoi} src={m.DuongDanMedia} alt="Review" className="w-16 h-16 rounded object-cover border border-border-default cursor-pointer hover:border-primary" />
+                            <img key={m.MaPhanHoi} src={getMediaUrl(m.DuongDanMedia)} alt="Review" className="w-16 h-16 rounded object-cover border border-border-default cursor-pointer hover:border-primary" />
                           ))}
                         </div>
                       )}

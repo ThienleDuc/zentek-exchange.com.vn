@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { productService } from '../../services/product.service';
-import { SERVER_URL } from '../../services/api';
+import { getProductImageUrl } from '../../utils/image.utils';
 import SearchableDropdown from '../../components/SearchableDropdown';
 import { getProvinces, getProvinceTree, type Province, type District, type Ward } from '../../services/location.service';
 import PaginationProduct from '../../components/common/PaginationProduct';
@@ -85,7 +85,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         <button className="reset-btn" onClick={onReset}>Đặt lại</button>
       </div>
 
-      {/* Địa điểm (3 cấp: Tỉnh -> Xã -> Quận) */}
+      {/* Địa điểm (3 cấp: Tỉnh -> Quận -> Xã) */}
       <div className="filter-group">
         <label className="filter-label">Tỉnh / Thành</label>
         <SearchableDropdown
@@ -98,18 +98,6 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
       </div>
 
       <div className="filter-group">
-        <label className="filter-label">Phường / Xã</label>
-        <SearchableDropdown
-          theme="light"
-          options={wards.map(w => ({ value: w.code, label: w.name }))}
-          value={selectedLocation.wardCode}
-          onChange={handleWardChange}
-          placeholder="Chọn Phường/Xã"
-          disabled={!selectedLocation.provinceCode}
-        />
-      </div>
-
-      <div className="filter-group">
         <label className="filter-label">Quận / Huyện</label>
         <SearchableDropdown
           theme="light"
@@ -117,19 +105,112 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
           value={selectedLocation.districtCode}
           onChange={handleDistrictChange}
           placeholder="Chọn Quận/Huyện"
-          disabled={!selectedLocation.wardCode}
+          disabled={!selectedLocation.provinceCode}
+        />
+      </div>
+
+      <div className="filter-group">
+        <label className="filter-label">Phường / Xã</label>
+        <SearchableDropdown
+          theme="light"
+          options={wards.map(w => ({ value: w.code, label: w.name }))}
+          value={selectedLocation.wardCode}
+          onChange={handleWardChange}
+          placeholder="Chọn Phường/Xã"
+          disabled={!selectedLocation.districtCode}
         />
       </div>
 
       {/* Khoảng giá */}
       <div className="filter-group">
         <label className="filter-label">Khoảng giá</label>
-        <div className="price-range">
-          <input type="number" placeholder="Từ" value={filters.priceMin === '' ? '' : filters.priceMin}
-            onChange={(e) => onFilterChange({ priceMin: e.target.value === '' ? '' : Number(e.target.value), page: 1 })} />
-          <span>-</span>
-          <input type="number" placeholder="Đến" value={filters.priceMax === '' ? '' : filters.priceMax}
-            onChange={(e) => onFilterChange({ priceMax: e.target.value === '' ? '' : Number(e.target.value), page: 1 })} />
+        <div className="price-range flex flex-col gap-2">
+          <div className="flex gap-2 items-center w-full">
+            <input type="number" placeholder="Từ" value={filters.priceMin === '' ? '' : filters.priceMin}
+              onChange={(e) => onFilterChange({ priceMin: e.target.value === '' ? '' : Number(e.target.value), page: 1 })}
+              className="flex-1 text-sm bg-surface-muted border border-border-default rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-primary outline-none" />
+            <span className="text-text-muted">-</span>
+            <input type="number" placeholder="Đến" value={filters.priceMax === '' ? '' : filters.priceMax}
+              onChange={(e) => onFilterChange({ priceMax: e.target.value === '' ? '' : Number(e.target.value), page: 1 })}
+              className="flex-1 text-sm bg-surface-muted border border-border-default rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-primary outline-none" />
+          </div>
+          {(filters.priceMin !== '' || filters.priceMax !== '') && (
+            <div className="text-[11px] text-primary bg-primary/5 border border-primary/10 rounded-lg p-2 mt-1 space-y-1 font-medium w-full animate-in fade-in duration-200">
+              {filters.priceMin !== '' && (
+                <div>Từ: <span className="font-bold">{(Number(filters.priceMin) * 100).toLocaleString('vi-VN')} đ</span></div>
+              )}
+              {filters.priceMax !== '' && (
+                <div>Đến: <span className="font-bold">{(Number(filters.priceMax) * 100).toLocaleString('vi-VN')} đ</span></div>
+              )}
+            </div>
+          )}
+
+          {/* Bảng gợi ý mức giá cách mỗi 5.000.000đ */}
+          <div className="mt-2">
+            <span className="text-[11px] text-text-muted font-semibold block mb-1.5">Gợi ý khoảng giá:</span>
+            <div className="price-suggestion-list">
+              {(() => {
+                const baseVal = (filters.priceMin && Number(filters.priceMin) > 0) ? Number(filters.priceMin) : 10000;
+                
+                const formatLabel = (val: number) => {
+                  const actualPrice = val * 100;
+                  if (actualPrice >= 1000000) {
+                    const millions = actualPrice / 1000000;
+                    return `${millions} triệu`;
+                  }
+                  return `${actualPrice.toLocaleString('vi-VN')} đ`;
+                };
+
+                const dynamicRanges = [
+                  {
+                    label: `${formatLabel(baseVal)} - ${formatLabel(baseVal * 5)}`,
+                    min: baseVal,
+                    max: baseVal * 5
+                  },
+                  {
+                    label: `${formatLabel(baseVal * 5)} - ${formatLabel(baseVal * 10)}`,
+                    min: baseVal * 5,
+                    max: baseVal * 10
+                  },
+                  {
+                    label: `${formatLabel(baseVal * 10)} - ${formatLabel(baseVal * 15)}`,
+                    min: baseVal * 10,
+                    max: baseVal * 15
+                  },
+                  {
+                    label: `${formatLabel(baseVal * 15)} - ${formatLabel(baseVal * 20)}`,
+                    min: baseVal * 15,
+                    max: baseVal * 20
+                  },
+                  {
+                    label: `Trên ${formatLabel(baseVal * 20)}`,
+                    min: baseVal * 20,
+                    max: '' as const
+                  }
+                ] as const;
+
+                return dynamicRanges.map((range, idx) => {
+                  const isActive = filters.priceMin === range.min && filters.priceMax === range.max;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        if (isActive) {
+                          onFilterChange({ priceMin: '', priceMax: '', page: 1 });
+                        } else {
+                          onFilterChange({ priceMin: range.min, priceMax: range.max, page: 1 });
+                        }
+                      }}
+                      className={`price-suggestion-item ${isActive ? 'active' : ''}`}
+                    >
+                      {range.label}
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -138,15 +219,15 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         <label className="filter-label">Đánh giá</label>
         <div className="rating-options">
           {[5,4,3,2,1].map(star => (
-            <label key={star} className="rating-option">
+            <label key={star} className="rating-option cursor-pointer">
               <input type="radio" name="rating" checked={filters.rating === star}
-                onChange={() => onFilterChange({ rating: star, page: 1 })} />
+                onChange={() => onFilterChange({ rating: star, page: 1 })} className="mr-2 cursor-pointer" />
               <span>{star} sao trở lên</span>
             </label>
           ))}
-          <label className="rating-option">
+          <label className="rating-option cursor-pointer">
             <input type="radio" name="rating" checked={filters.rating === 0}
-              onChange={() => onFilterChange({ rating: 0, page: 1 })} />
+              onChange={() => onFilterChange({ rating: 0, page: 1 })} className="mr-2 cursor-pointer" />
             <span>Tất cả</span>
           </label>
         </div>
@@ -156,19 +237,19 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
       <div className="filter-group">
         <label className="filter-label">Tình trạng</label>
         <div className="condition-options">
-          <label>
+          <label className="cursor-pointer">
             <input type="radio" name="condition" value="Mới" checked={filters.condition === 'Mới'}
-              onChange={() => onFilterChange({ condition: 'Mới', page: 1 })} />
+              onChange={() => onFilterChange({ condition: 'Mới', page: 1 })} className="mr-2 cursor-pointer" />
             <span>Mới</span>
           </label>
-          <label>
+          <label className="cursor-pointer">
             <input type="radio" name="condition" value="Cũ" checked={filters.condition === 'Cũ'}
-              onChange={() => onFilterChange({ condition: 'Cũ', page: 1 })} />
+              onChange={() => onFilterChange({ condition: 'Cũ', page: 1 })} className="mr-2 cursor-pointer" />
             <span>Cũ</span>
           </label>
-          <label>
+          <label className="cursor-pointer">
             <input type="radio" name="condition" value="" checked={filters.condition === ''}
-              onChange={() => onFilterChange({ condition: '', page: 1 })} />
+              onChange={() => onFilterChange({ condition: '', page: 1 })} className="mr-2 cursor-pointer" />
             <span>Tất cả</span>
           </label>
         </div>
@@ -208,7 +289,6 @@ const Search: React.FC = () => {
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
-  const [allDistrictsOfProvince, setAllDistrictsOfProvince] = useState<any[]>([]);
   const [selectedLocation, setSelectedLocation] = useState({
     provinceCode: '' as string | number,
     districtCode: '' as string | number,
@@ -223,6 +303,7 @@ const Search: React.FC = () => {
         setProvinces(provsList);
 
         const urlProv = searchParams.get('province') || '';
+        const urlDist = searchParams.get('district') || '';
         const urlWard = searchParams.get('ward') || '';
 
         if (urlProv) {
@@ -233,22 +314,19 @@ const Search: React.FC = () => {
             
             const tree = await getProvinceTree(provCode);
             if (tree) {
-              setAllDistrictsOfProvince(tree.districts || []);
-              const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
-                ...w,
-                district_code: d.code
-              })));
-              setWards(flatWards);
+              setDistricts(tree.districts || []);
 
-              if (urlWard) {
-                const matchingWard = flatWards.find(w => w.name === urlWard);
-                if (matchingWard) {
-                  setSelectedLocation(prev => ({ ...prev, wardCode: matchingWard.code }));
-                  const distCode = matchingWard.district_code;
-                  const matchingDist = (tree.districts || []).find(d => d.code === distCode);
-                  if (matchingDist) {
-                    setDistricts([matchingDist]);
-                    setSelectedLocation(prev => ({ ...prev, wardCode: matchingWard.code, districtCode: matchingDist.code }));
+              if (urlDist) {
+                const matchingDist = (tree.districts || []).find(d => d.name === urlDist);
+                if (matchingDist) {
+                  setSelectedLocation(prev => ({ ...prev, districtCode: matchingDist.code }));
+                  setWards(matchingDist.wards || []);
+
+                  if (urlWard) {
+                    const matchingWard = (matchingDist.wards || []).find(w => w.name === urlWard);
+                    if (matchingWard) {
+                      setSelectedLocation(prev => ({ ...prev, wardCode: matchingWard.code }));
+                    }
                   }
                 }
               }
@@ -269,8 +347,8 @@ const Search: React.FC = () => {
       const response = await productService.searchProducts({
         q: currentFilters.keyword,
         category: currentFilters.category,
-        priceMin: currentFilters.priceMin,
-        priceMax: currentFilters.priceMax,
+        priceMin: currentFilters.priceMin !== '' ? Number(currentFilters.priceMin) * 100 : '',
+        priceMax: currentFilters.priceMax !== '' ? Number(currentFilters.priceMax) * 100 : '',
         rating: currentFilters.rating,
         condition: currentFilters.condition,
         province: currentFilters.province,
@@ -330,7 +408,6 @@ const Search: React.FC = () => {
       });
       setDistricts([]);
       setWards([]);
-      setAllDistrictsOfProvince([]);
     }
   }, [searchParams, fetchProducts]);
 
@@ -372,68 +449,45 @@ const Search: React.FC = () => {
 
     setWards([]);
     setDistricts([]);
-    setAllDistrictsOfProvince([]);
 
     if (provinceCode) {
       const tree = await getProvinceTree(provinceCode);
       if (tree) {
-        setAllDistrictsOfProvince(tree.districts || []);
-        const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
-          ...w,
-          district_code: d.code
-        })));
-        setWards(flatWards);
-      }
-    }
-  };
-
-  const handleWardChange = (val: string | number) => {
-    const wardCode = Number(val);
-    const ward = wards.find(w => w.code === wardCode) as any;
-    const wardName = ward?.name || '';
-
-    updateFilter({
-      ward: wardName,
-      district: ''
-    });
-
-    setSelectedLocation(prev => ({
-      ...prev,
-      wardCode,
-      districtCode: ''
-    }));
-
-    setDistricts([]);
-
-    if (ward) {
-      const distCode = ward.district_code;
-      const matchingDist = allDistrictsOfProvince.find(d => d.code === distCode);
-      if (matchingDist) {
-        setDistricts([matchingDist]);
-        updateFilter({
-          ward: wardName,
-          district: matchingDist.name
-        });
-        setSelectedLocation(prev => ({
-          ...prev,
-          wardCode,
-          districtCode: matchingDist.code
-        }));
+        setDistricts(tree.districts || []);
       }
     }
   };
 
   const handleDistrictChange = (val: string | number) => {
     const districtCode = Number(val);
-    const districtName = districts.find(d => d.code === districtCode)?.name || '';
+    const district = districts.find(d => d.code === districtCode) as any;
+    const districtName = district?.name || '';
 
     updateFilter({
-      district: districtName
+      district: districtName,
+      ward: ''
     });
 
     setSelectedLocation(prev => ({
       ...prev,
-      districtCode
+      districtCode,
+      wardCode: ''
+    }));
+
+    setWards(district ? district.wards || [] : []);
+  };
+
+  const handleWardChange = (val: string | number) => {
+    const wardCode = Number(val);
+    const wardName = wards.find(w => w.code === wardCode)?.name || '';
+
+    updateFilter({
+      ward: wardName
+    });
+
+    setSelectedLocation(prev => ({
+      ...prev,
+      wardCode
     }));
   };
 
@@ -450,14 +504,8 @@ const Search: React.FC = () => {
     });
     setWards([]);
     setDistricts([]);
-    setAllDistrictsOfProvince([]);
   };
 
-  const getImageUrl = (path: string) => {
-    if (!path) return '/default-product.png';
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    return `${SERVER_URL}${path}`;
-  };
 
   const totalPages = Math.ceil(total / limit);
 
@@ -546,7 +594,7 @@ const Search: React.FC = () => {
                   navigate(`/san-pham/${product.MaSanPham}`);
                 }}>
                   <figure className="product-image-wrapper">
-                    <img src={getImageUrl(product.HinhAnh)} alt={product.TieuDe} className="product-image" loading="lazy" />
+                    <img src={getProductImageUrl(product.HinhAnh)} alt={product.TieuDe} className="product-image" loading="lazy" />
                     <figcaption className={`condition-badge ${product.TinhTrang === 'Mới' ? 'new' : 'old'}`}>
                       {product.TinhTrang}
                     </figcaption>

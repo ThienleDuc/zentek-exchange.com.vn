@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, Calendar, Edit, Key, Camera } from 'lucide-react';
-import { storage } from '../../utils/storage.utils';
 import { PATHS } from '../../utils/path.utils';
+import { getUserProfile } from '../../services/profile.service';
+import { getUserAvatarUrl } from '../../utils/image.utils';
 
 interface UserProfile {
   HoTen: string;
@@ -39,63 +40,63 @@ const BuyerDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Lấy userId từ storage (giả định)
-  const userId = storage.getUser()?.MaNguoiDung || 'buyer_demo_id';
-
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
       setError(null);
       try {
-        // API giả định: GET /api/user/profile
-        console.log(`[API giả định] Gọi GET /api/user/profile?userId=${userId}`);
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        // Dữ liệu giả - có thể có ảnh đại diện thật để test méo
-        const mockProfile: UserProfile = {
-          HoTen: 'Trần Thị Bích',
-          TenDangNhap: 'buyer01',
-          Email: 'buyer01@gmail.com',
-          SoDienThoai: '0911111111',
-          // Thử dùng ảnh không vuông để kiểm tra object-fit
-          AnhDaiDien: 'https://picsum.photos/id/100/300/400', // ảnh 300x400 (không vuông)
-          NgayTao: '2024-01-10T00:00:00Z',
-        };
-        setProfile(mockProfile);
-      } catch (err) {
-        setError('Không thể tải thông tin tài khoản. Vui lòng thử lại.');
-        console.error('[Tương tác] Lỗi khi gọi API giả lập:', err);
+        const response = await getUserProfile();
+        if (response.success && response.data) {
+          setProfile({
+            HoTen: response.data.HoTen || '',
+            TenDangNhap: response.data.TenDangNhap || '',
+            Email: response.data.Email || '',
+            SoDienThoai: response.data.SoDienThoai || '',
+            AnhDaiDien: response.data.AnhDaiDien || null,
+            NgayTao: response.data.NgayTao || '',
+          });
+        } else {
+          setError('Không thể tải thông tin tài khoản.');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Không thể tải thông tin tài khoản. Vui lòng thử lại.');
+        console.error('Lỗi khi gọi API getUserProfile:', err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [userId]);
+  }, []);
 
   const handleRetry = () => {
-    console.log('[Tương tác] Người dùng nhấn "Thử lại"');
     window.location.reload();
   };
 
   const handleChangeAvatar = () => {
-    console.log('[Tương tác] Mở hộp thoại đổi ảnh đại diện (chức năng đang phát triển)');
-    alert('Chức năng đổi ảnh đang được phát triển.');
+    navigate(PATHS.Buyer.TAI_KHOAN_CA_NHAN);
   };
 
   const handleEditProfile = () => {
-    console.log('[Tương tác] Chuyển đến trang chỉnh sửa thông tin');
     navigate(PATHS.Buyer.TAI_KHOAN_CA_NHAN);
   };
 
   const handleChangePassword = () => {
-    console.log('[Tương tác] Chuyển đến trang đổi mật khẩu');
     navigate(PATHS.Buyer.DOI_MAT_KHAU);
   };
 
   return (
     <main className="buyer-dashboard">
       <div className="buyer-dashboard__container">
+        {/* Banner chào mừng */}
+        <div className="buyer-dashboard__banner">
+          <div className="buyer-dashboard__banner-overlay"></div>
+          <div className="buyer-dashboard__banner-content">
+            <h2>Chào mừng quay trở lại, {profile?.HoTen || 'Bạn'}!</h2>
+            <p>Quản lý thông tin cá nhân, cập nhật tài khoản và bảo mật mật khẩu của bạn tại ZenTek.</p>
+          </div>
+        </div>
+
         <h1 className="buyer-dashboard__title">Tài khoản của tôi</h1>
 
         {loading ? (
@@ -125,7 +126,7 @@ const BuyerDashboard: React.FC = () => {
               <div className="buyer-dashboard__avatar-wrapper">
                 {profile.AnhDaiDien ? (
                   <img
-                    src={profile.AnhDaiDien}
+                    src={getUserAvatarUrl(profile.AnhDaiDien)}
                     alt="Avatar"
                     className="buyer-dashboard__avatar"
                   />

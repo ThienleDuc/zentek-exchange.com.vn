@@ -3,6 +3,7 @@ import { Upload, Trash2, Sparkles, Image as ImageIcon, X, Loader2, Plus } from '
 import api, { SERVER_URL } from '../../services/api';
 import { uploadImage } from '../../services/upload.service';
 import productSellerService from '../../services/productSeller.service';
+import { getProductImageUrl } from '../../utils/image.utils';
 import { encodeFile } from '../../utils/file.utils';
 import { type Product } from '../../pages/admin/ProductManagement';
 
@@ -519,7 +520,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                         <div className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border border-border-default bg-surface-muted flex items-center justify-center self-start">
                           {img.url ? (
                             <img
-                              src={img.url.startsWith('http') ? img.url : `${SERVER_URL}${img.url}`}
+                              src={getProductImageUrl(img.url)}
                               alt="product"
                               className="w-full h-full object-cover"
                             />

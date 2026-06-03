@@ -6,6 +6,7 @@ import { getProvinces, getDistricts, getWards, type Province, type District, typ
 import SearchableDropdown from '../../components/SearchableDropdown';
 import { orderService, type OrderItem } from '../../services/order.service';
 import { storage } from '../../utils/storage.utils';
+import { getProductImageUrl, getStoreLogoUrl } from '../../utils/image.utils';
 
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
@@ -168,6 +169,7 @@ const Checkout: React.FC = () => {
         setCreatedOrderIds(orderIds);
         setCreatedOrderId(res.data.MaDonHang);
         setShowSuccessModal(true);
+        window.dispatchEvent(new Event('cart-updated'));
       }
     } catch (err: any) {
       alert(err.response?.data?.message || 'Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.');
@@ -338,7 +340,7 @@ const Checkout: React.FC = () => {
                   <div key={groupIdx} className="summary-shop-group">
                     <div className="summary-shop-header">
                       {group.shopLogo ? (
-                        <img src={group.shopLogo} alt={group.shopName} className="summary-shop-logo" />
+                        <img src={getStoreLogoUrl(group.shopLogo)} alt={group.shopName} className="summary-shop-logo" />
                       ) : (
                         <div className="summary-shop-icon-fallback">
                           {group.shopName.charAt(0).toUpperCase()}
@@ -350,7 +352,7 @@ const Checkout: React.FC = () => {
                     
                     {group.items.map(item => (
                       <div key={item.sanPhamId + '_' + (item.phanLoaiId || '')} className="summary-item">
-                        <img src={item.anh} alt={item.tenSanPham} />
+                        <img src={getProductImageUrl(item.anh)} alt={item.tenSanPham} />
                         <div className="summary-item-info">
                           <div className="summary-item-name">{item.tenSanPham}</div>
                           {item.phanLoai && <div className="summary-item-variant">{item.phanLoai}</div>}

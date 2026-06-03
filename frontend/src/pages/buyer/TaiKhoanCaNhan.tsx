@@ -6,6 +6,7 @@ import { storage } from '../../utils/storage.utils';
 import { PATHS } from '../../utils/path.utils';
 import { getUserProfile, updateUserProfile, sendOtp, verifyOtp as verifyOtpApi } from '../../services/profile.service';
 import { uploadImage } from '../../services/upload.service';
+import { getUserAvatarUrl } from '../../utils/image.utils';
 
 interface UserProfile {
   HoTen: string;
@@ -53,7 +54,7 @@ const TaiKhoanCaNhan: React.FC = () => {
             AnhDaiDien: response.data.AnhDaiDien || null,
           };
           setFormData(profileData);
-          setAvatarPreview(response.data.AnhDaiDien);
+          setAvatarPreview(response.data.AnhDaiDien ? getUserAvatarUrl(response.data.AnhDaiDien) : null);
         }
       } catch (err: any) {
         setErrorMsg(err.message || 'Không thể tải thông tin. Vui lòng thử lại.');
@@ -110,6 +111,7 @@ const TaiKhoanCaNhan: React.FC = () => {
             ...currentUser,
             avatar: undefined
           });
+          window.dispatchEvent(new CustomEvent('user-updated'));
         }
         setSuccessMsg('Xóa ảnh đại diện thành công!');
       } else {
@@ -138,6 +140,7 @@ const TaiKhoanCaNhan: React.FC = () => {
         const updateRes = await updateUserProfile(payload);
         if (updateRes.success) {
           setFormData(prev => ({ ...prev, AnhDaiDien: newAvatarUrl }));
+          setAvatarPreview(getUserAvatarUrl(newAvatarUrl));
           setAvatarFile(null);
           // Cập nhật local storage
           const currentUser = storage.getUser();
@@ -146,6 +149,7 @@ const TaiKhoanCaNhan: React.FC = () => {
               ...currentUser,
               avatar: newAvatarUrl
             });
+            window.dispatchEvent(new CustomEvent('user-updated'));
           }
           setSuccessMsg('Lưu ảnh đại diện thành công!');
         } else {
@@ -163,7 +167,7 @@ const TaiKhoanCaNhan: React.FC = () => {
 
   const handleCancelAvatar = () => {
     setAvatarFile(null);
-    setAvatarPreview(formData.AnhDaiDien);
+    setAvatarPreview(formData.AnhDaiDien ? getUserAvatarUrl(formData.AnhDaiDien) : null);
   };
 
   // Gửi OTP
@@ -251,6 +255,7 @@ const TaiKhoanCaNhan: React.FC = () => {
             email: formData.Email,
             avatar: formData.AnhDaiDien || undefined
           });
+          window.dispatchEvent(new CustomEvent('user-updated'));
         }
         setTimeout(() => navigate(PATHS.Buyer.DASHBOARD), 2000);
       } else {

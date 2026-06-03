@@ -3,6 +3,7 @@ import { X, CheckCircle, FileText, Lock, Unlock, Store, Phone, User, AlertTriang
 import api from '../../services/api';
 import { type Shop } from '../../pages/admin/ShopManagement';
 import { type AlertType } from '../common/Alert';
+import { getStoreLogoUrl, getDocumentUrl } from '../../utils/image.utils';
 
 interface ShopDetailModalProps {
   isOpen: boolean;
@@ -92,7 +93,7 @@ const ShopDetailModal: React.FC<ShopDetailModalProps> = ({ isOpen, shop, onClose
           {/* Header Info */}
           <div className="flex gap-4 items-start mb-6 pb-6 border-b border-border-default">
             <div className="w-20 h-20 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-3xl font-bold shrink-0 overflow-hidden">
-              {shop.Logo ? <img src={shop.Logo} alt="Logo" className="w-full h-full object-cover" /> : shop.TenCuaHang.charAt(0)}
+              {shop.Logo ? <img src={getStoreLogoUrl(shop.Logo)} alt="Logo" className="w-full h-full object-cover" /> : shop.TenCuaHang.charAt(0)}
             </div>
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-text-main">{shop.TenCuaHang}</h2>
@@ -154,7 +155,7 @@ const ShopDetailModal: React.FC<ShopDetailModalProps> = ({ isOpen, shop, onClose
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-border-default/50">
                   <span className="text-text-muted">Giấy phép:</span>
                   <a 
-                    href={shop.PdfGiayPhep?.startsWith('http') || shop.PdfGiayPhep?.startsWith('blob:') ? shop.PdfGiayPhep : `http://localhost:5000${shop.PdfGiayPhep}`} 
+                    href={getDocumentUrl(shop.PdfGiayPhep)} 
                     target="_blank" 
                     rel="noreferrer"
                     className="text-primary hover:underline text-xs font-medium flex items-center gap-1"

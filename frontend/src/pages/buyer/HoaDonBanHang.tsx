@@ -4,7 +4,7 @@ import { MessageSquare, ShoppingBag, Printer } from 'lucide-react';
 import { PATHS } from '../../utils/path.utils';
 import { getUserFromStorage, isBuyer, isSeller } from '../../utils/role.utils';
 import { orderAdminService, type AdminOrder } from '../../services/orderAdmin.service';
-import { chatClientService } from '../../services/chatClient.service';
+import { chatService } from '../../services/chat.service';
 import { cartService } from '../../services/cart.service';
 import ReviewModal from '../../components/buyer/ReviewModal';
 
@@ -64,13 +64,9 @@ const HoaDonBanHang: React.FC = () => {
         return;
       }
 
-      const checkRes = await chatClientService.checkPrivateChatExists(otherUserId);
-      let conversationId = checkRes.data.conversationId;
-
-      if (!checkRes.data.exists || !conversationId) {
-        const createRes = await chatClientService.createPrivateChat(otherUserId);
-        conversationId = createRes.data.conversationId;
-      }
+      // Tìm hoặc tạo phòng chat riêng tư (1 bước duy nhất)
+      const res = await chatService.findOrCreatePrivateChat(otherUserId);
+      const conversationId = res.data?.conversationId;
 
       if (conversationId) {
         if (role === 'buyer') {

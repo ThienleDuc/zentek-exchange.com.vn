@@ -1,35 +1,25 @@
 const { sql, poolPromise } = require('../config/db');
+const chatRepository = require('../repositories/chat/chat.repository');
+const { getFilenameOnly } = require('../utils/file.utils');
 
 class ChatAdminService {
   async getConversations(adminId, filter = 'all') {
     const pool = await poolPromise;
-    
-    // 1. Lấy vai trò của người dùng hiện tại
-    const roleResult = await pool.request()
-      .input('userId', sql.UniqueIdentifier, adminId)
-      .query(`
-        SELECT v.TenVaiTro 
-        FROM NguoiDung n
-        JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
-        WHERE n.MaNguoiDung = @userId
-      `);
-      
-    const userRole = roleResult.recordset[0]?.TenVaiTro;
+    const userRole = await chatRepository.getUserRole(adminId);
     const isAdminUser = userRole === 'Admin' || userRole === 'Moderator';
     
     let query = '';
     
     if (isAdminUser) {
-      // TRƯỜNG HỢP ADMIN/MODERATOR: Lấy tất cả cuộc trò chuyện trong hệ thống
       query = `
         SELECT 
           c.MaCuocTroChuyen, 
           c.TenCuocTroChuyen, 
           c.Loai, 
           c.NgayCapNhat,
-          (SELECT TOP 1 NoiDung FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessage,
-          (SELECT TOP 1 NgayGui FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessageTime,
-          -- Tên Buyer nếu có
+            (SELECT TOP 1 NoiDung FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessage,
+            (SELECT TOP 1 NgayGui FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessageTime,
+            (SELECT COUNT(*) FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen AND t.NguoiGuiId != @adminId AND t.DaDoc = 0 AND t.DaThuHoi = 0) AS UnreadCount,
           (
             SELECT TOP 1 n.HoTen 
             FROM ThanhVienCuocTroChuyen tv 
@@ -37,7 +27,6 @@ class ChatAdminService {
             JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
             WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen AND v.TenVaiTro = 'Buyer'
           ) AS BuyerName,
-          -- Avatar Buyer nếu có
           (
             SELECT TOP 1 n.AnhDaiDien 
             FROM ThanhVienCuocTroChuyen tv 
@@ -45,14 +34,12 @@ class ChatAdminService {
             JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
             WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen AND v.TenVaiTro = 'Buyer'
           ) AS BuyerAvatar,
-          -- Tên Cửa hàng nếu có
           (
             SELECT TOP 1 ch.TenCuaHang 
             FROM ThanhVienCuocTroChuyen tv 
             JOIN CuaHang ch ON tv.NguoiDungId = ch.NguoiBanId 
             WHERE tv.CuocTroChuyenId = c.MaCuocTroChuyen
           ) AS ShopName,
-          -- Logo Cửa hàng nếu có
           (
             SELECT TOP 1 ch.Logo 
             FROM ThanhVienCuocTroChuyen tv 
@@ -63,11 +50,9 @@ class ChatAdminService {
         WHERE 1=1
       `;
       
-      // Filter logic cho Admin
       if (filter === 'group') {
         query += ` AND c.Loai = 'nhom'`;
       } else if (filter === 'individual') {
-        // Chat cá nhân giữa các Buyers với nhau (không có Seller)
         query += ` AND c.Loai = 'ca_nhan' AND NOT EXISTS (
           SELECT 1 FROM ThanhVienCuocTroChuyen tv2 
           JOIN NguoiDung n2 ON tv2.NguoiDungId = n2.MaNguoiDung
@@ -75,7 +60,6 @@ class ChatAdminService {
           WHERE tv2.CuocTroChuyenId = c.MaCuocTroChuyen AND v2.TenVaiTro = 'Seller'
         )`;
       } else if (filter === 'store') {
-        // Chat liên quan đến Cửa hàng (có ít nhất 1 Seller)
         query += ` AND c.Loai = 'ca_nhan' AND EXISTS (
           SELECT 1 FROM ThanhVienCuocTroChuyen tv2 
           JOIN NguoiDung n2 ON tv2.NguoiDungId = n2.MaNguoiDung
@@ -84,15 +68,15 @@ class ChatAdminService {
         )`;
       }
     } else {
-      // TRƯỜNG HỢP SELLER/BUYER: Chỉ lấy cuộc trò chuyện của chính mình
       query = `
         SELECT 
           c.MaCuocTroChuyen, 
           c.TenCuocTroChuyen, 
           c.Loai, 
           c.NgayCapNhat,
-          (SELECT TOP 1 NoiDung FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessage,
-          (SELECT TOP 1 NgayGui FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC) AS LastMessageTime,
+            (SELECT TOP 1 NoiDung FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen AND t.DaThuHoi = 0 ORDER BY t.NgayGui DESC) AS LastMessage,
+            (SELECT TOP 1 NgayGui FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen AND t.DaThuHoi = 0 ORDER BY t.NgayGui DESC) AS LastMessageTime,
+            (SELECT COUNT(*) FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen AND t.NguoiGuiId != @adminId AND t.DaDoc = 0 AND t.DaThuHoi = 0) AS UnreadCount,
           (
             SELECT TOP 1 n.HoTen 
             FROM ThanhVienCuocTroChuyen tv 
@@ -129,11 +113,9 @@ class ChatAdminService {
         WHERE my_tv.NguoiDungId = @adminId
       `;
       
-      // Filter logic cho Seller/Buyer
       if (filter === 'group') {
         query += ` AND c.Loai = 'nhom'`;
       } else if (filter === 'individual') {
-        // Chat cá nhân giữa Buyer - Buyer hoặc Seller - Buyer (đối phương là Buyer)
         query += ` AND c.Loai = 'ca_nhan' AND EXISTS (
           SELECT 1 FROM ThanhVienCuocTroChuyen tv2 
           JOIN NguoiDung n2 ON tv2.NguoiDungId = n2.MaNguoiDung
@@ -141,7 +123,6 @@ class ChatAdminService {
           WHERE tv2.CuocTroChuyenId = c.MaCuocTroChuyen AND tv2.NguoiDungId != @adminId AND v2.TenVaiTro = 'Buyer'
         )`;
       } else if (filter === 'store') {
-        // Chat liên quan đến Cửa hàng (đối phương là Seller)
         query += ` AND c.Loai = 'ca_nhan' AND EXISTS (
           SELECT 1 FROM ThanhVienCuocTroChuyen tv2 
           JOIN NguoiDung n2 ON tv2.NguoiDungId = n2.MaNguoiDung
@@ -150,15 +131,17 @@ class ChatAdminService {
         )`;
       }
     }
-    
-    query += ` ORDER BY COALESCE((SELECT TOP 1 NgayGui FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC), c.NgayCapNhat) DESC`;
+
+    if (isAdminUser) {
+      query += ` ORDER BY COALESCE((SELECT TOP 1 NgayGui FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen ORDER BY t.NgayGui DESC), c.NgayCapNhat) DESC`;
+    } else {
+      query += ` ORDER BY COALESCE((SELECT TOP 1 NgayGui FROM TinNhan t WHERE t.CuocTroChuyenId = c.MaCuocTroChuyen AND t.DaThuHoi = 0 ORDER BY t.NgayGui DESC), c.NgayCapNhat) DESC`;
+    }
 
     const request = pool.request();
     request.input('adminId', sql.UniqueIdentifier, adminId);
-    
     const result = await request.query(query);
     
-    // Xử lý dữ liệu trả về cho frontend
     const conversations = result.recordset.map(row => {
       let name = row.TenCuocTroChuyen;
       let avatar = null;
@@ -201,7 +184,7 @@ class ChatAdminService {
         avatar: avatar,
         lastMessage: row.LastMessage,
         lastMessageTime: row.LastMessageTime || row.NgayCapNhat,
-        unreadCount: 0
+        unreadCount: row.UnreadCount || 0
       };
     });
 
@@ -210,62 +193,57 @@ class ChatAdminService {
 
   async getMessages(conversationId, adminId) {
     const pool = await poolPromise;
-    
-    // 1. Kiểm tra vai trò người dùng
-    const roleResult = await pool.request()
-      .input('userId', sql.UniqueIdentifier, adminId)
-      .query(`
-        SELECT v.TenVaiTro 
-        FROM NguoiDung n
-        JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
-        WHERE n.MaNguoiDung = @userId
-      `);
-      
-    const userRole = roleResult.recordset[0]?.TenVaiTro;
+    const userRole = await chatRepository.getUserRole(adminId);
     const isAdminUser = userRole === 'Admin' || userRole === 'Moderator';
     
     if (!isAdminUser) {
-      // Kiểm tra quyền
-      const checkRole = await pool.request()
-        .input('convId', sql.UniqueIdentifier, conversationId)
-        .input('userId', sql.UniqueIdentifier, adminId)
-        .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @convId AND NguoiDungId = @userId`);
-        
-      if (checkRole.recordset.length === 0) {
+      const isMember = await chatRepository.isMember(conversationId, adminId);
+      if (!isMember) {
         throw new Error('Bạn không có quyền xem cuộc trò chuyện này');
       }
     }
 
-    const result = await pool.request()
-      .input('convId', sql.UniqueIdentifier, conversationId)
-      .query(`
-        SELECT 
-          t.MaTinNhan,
-          t.NoiDung,
-          t.NgayGui,
-          t.NguoiGuiId,
-          t.DaDoc,
-          t.DaThuHoi,
-          n.HoTen as SenderName,
-          n.AnhDaiDien as SenderAvatar,
-          v.TenVaiTro as UserRole,
-          ch.TenCuaHang as ShopName,
-          ch.Logo as ShopLogo,
-          tv.VaiTro as SenderRole,
-          (
-             SELECT LoaiMedia, DuongDanMedia 
-             FROM PhanHoiMedia 
-             WHERE TinNhanId = t.MaTinNhan 
-             FOR JSON PATH
-          ) as MediaFiles
-        FROM TinNhan t
-        JOIN NguoiDung n ON t.NguoiGuiId = n.MaNguoiDung
-        JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
-        LEFT JOIN CuaHang ch ON n.MaNguoiDung = ch.NguoiBanId
-        LEFT JOIN ThanhVienCuocTroChuyen tv ON t.NguoiGuiId = tv.NguoiDungId AND t.CuocTroChuyenId = tv.CuocTroChuyenId
-        WHERE t.CuocTroChuyenId = @convId
-        ORDER BY t.NgayGui ASC
-      `);
+    const request = pool.request();
+    request.input('convId', sql.UniqueIdentifier, conversationId);
+    request.input('userId', sql.UniqueIdentifier, adminId);
+
+    // Mark messages in this conversation sent by others as read
+    await request.query(`
+      UPDATE TinNhan 
+      SET DaDoc = 1 
+      WHERE CuocTroChuyenId = @convId AND NguoiGuiId != @userId AND DaDoc = 0
+    `);
+
+    const extraWhere = isAdminUser ? '' : ' AND t.DaThuHoi = 0';
+
+    const result = await request.query(`
+      SELECT 
+        t.MaTinNhan,
+        t.NoiDung,
+        t.NgayGui,
+        t.NguoiGuiId,
+        t.DaDoc,
+        t.DaThuHoi,
+        n.HoTen as SenderName,
+        n.AnhDaiDien as SenderAvatar,
+        v.TenVaiTro as UserRole,
+        ch.TenCuaHang as ShopName,
+        ch.Logo as ShopLogo,
+        tv.VaiTro as SenderRole,
+        (
+           SELECT LoaiMedia, DuongDanMedia 
+           FROM PhanHoiMedia 
+           WHERE TinNhanId = t.MaTinNhan 
+           FOR JSON PATH
+        ) as MediaFiles
+      FROM TinNhan t
+      JOIN NguoiDung n ON t.NguoiGuiId = n.MaNguoiDung
+      JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
+      LEFT JOIN CuaHang ch ON n.MaNguoiDung = ch.NguoiBanId
+      LEFT JOIN ThanhVienCuocTroChuyen tv ON t.NguoiGuiId = tv.NguoiDungId AND t.CuocTroChuyenId = tv.CuocTroChuyenId
+      WHERE t.CuocTroChuyenId = @convId ${extraWhere}
+      ORDER BY t.NgayGui ASC
+    `);
       
     return result.recordset.map(row => {
       let mediaList = [];
@@ -305,46 +283,29 @@ class ChatAdminService {
   }
 
   async recallMessage(messageId, adminId) {
-    const pool = await poolPromise;
-    const request = pool.request();
-    request.input('msgId', sql.UniqueIdentifier, messageId);
-    
-    // Check if the message belongs to the user and is within 24h
-    const msgResult = await request.query(`
-      SELECT NguoiGuiId, NgayGui FROM TinNhan 
-      WHERE MaTinNhan = @msgId
-    `);
-
-    if (msgResult.recordset.length === 0) {
+    const msg = await chatRepository.getMessageById(messageId);
+    if (!msg) {
       throw new Error('Tin nhắn không tồn tại');
     }
-
-    const msg = msgResult.recordset[0];
     if (msg.NguoiGuiId !== adminId) {
       throw new Error('Bạn không có quyền thu hồi tin nhắn của người khác');
     }
-
     const hoursDiff = (new Date() - new Date(msg.NgayGui)) / (1000 * 60 * 60);
     if (hoursDiff > 24) {
       throw new Error('Chỉ có thể thu hồi tin nhắn trong vòng 24 giờ');
     }
 
-    await request.query(`
-      UPDATE TinNhan SET DaThuHoi = 1 WHERE MaTinNhan = @msgId
-    `);
+    await chatRepository.markMessageAsRecalled(messageId);
 
-    // HIDE MEDIA
+    // Ẩn media
     const { hideFile } = require('../utils/file.utils');
-    const mediaResult = await request.query(`SELECT MaPhanHoi, DuongDanMedia FROM PhanHoiMedia WHERE TinNhanId = @msgId`);
-    for (const media of mediaResult.recordset) {
+    const mediaList = await chatRepository.getMediaByMessageId(messageId);
+    for (const media of mediaList) {
       let currentUrl = media.DuongDanMedia;
       if (!currentUrl.startsWith('/')) currentUrl = '/uploads/media/' + currentUrl;
       const newUrl = hideFile(currentUrl);
       if (newUrl) {
-        await pool.request()
-          .input('maPhanHoi', sql.UniqueIdentifier, media.MaPhanHoi)
-          .input('newUrl', sql.VarChar(500), newUrl)
-          .query(`UPDATE PhanHoiMedia SET DuongDanMedia = @newUrl WHERE MaPhanHoi = @maPhanHoi`);
+        await chatRepository.updateMediaUrl(media.MaPhanHoi, newUrl);
       }
     }
 
@@ -352,52 +313,28 @@ class ChatAdminService {
   }
 
   async deleteMessagePermanently(messageId, adminId) {
-    const pool = await poolPromise;
-    const request = pool.request();
-    request.input('msgId', sql.UniqueIdentifier, messageId);
-
-    const msgResult = await request.query(`
-      SELECT CuocTroChuyenId FROM TinNhan WHERE MaTinNhan = @msgId
-    `);
-    
-    if (msgResult.recordset.length === 0) {
+    const msg = await chatRepository.getMessageById(messageId);
+    if (!msg) {
       throw new Error('Tin nhắn không tồn tại');
     }
-    const convId = msgResult.recordset[0].CuocTroChuyenId;
-    
-    // Check role in conversation (bypass if Admin/Moderator)
-    const roleResult = await pool.request()
-      .input('userId', sql.UniqueIdentifier, adminId)
-      .query(`
-        SELECT v.TenVaiTro 
-        FROM NguoiDung n
-        JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
-        WHERE n.MaNguoiDung = @userId
-      `);
-      
-    const userRole = roleResult.recordset[0]?.TenVaiTro;
-    const isAdminUser = userRole === 'Admin' || userRole === 'Moderator';
+    const convId = msg.CuocTroChuyenId;
 
+    const userRole = await chatRepository.getUserRole(adminId);
+    const isAdminUser = userRole === 'Admin' || userRole === 'Moderator';
     if (!isAdminUser) {
-      const checkRole = await pool.request()
-        .input('convId', sql.UniqueIdentifier, convId)
-        .input('userId', sql.UniqueIdentifier, adminId)
-        .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @convId AND NguoiDungId = @userId`);
-        
-      if (checkRole.recordset.length === 0) {
-        throw new Error('Bạn không có quyền thực hiện hành động này');
-      }
+      throw new Error('Bạn không có quyền xóa tin nhắn này');
     }
 
+    // Xóa file media khỏi disk
     const { deleteFile } = require('../utils/file.utils');
-    const mediaResult = await request.query(`SELECT DuongDanMedia FROM PhanHoiMedia WHERE TinNhanId = @msgId`);
-    
-    for (const media of mediaResult.recordset) {
+    const mediaList = await chatRepository.getMediaByMessageId(messageId);
+    for (const media of mediaList) {
       let currentUrl = media.DuongDanMedia;
       if (!currentUrl.startsWith('/')) currentUrl = '/uploads/media/' + currentUrl;
       deleteFile(currentUrl);
     }
 
+    const pool = await poolPromise;
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
     try {
@@ -405,20 +342,15 @@ class ChatAdminService {
       txRequest.input('msgId', sql.UniqueIdentifier, messageId);
       txRequest.input('convId', sql.UniqueIdentifier, convId);
 
-      // Nullify TinNhanCuoiId temporarily if it is the one being deleted
       await txRequest.query(`
         UPDATE CuocTroChuyen 
         SET TinNhanCuoiId = NULL 
         WHERE MaCuocTroChuyen = @convId AND TinNhanCuoiId = @msgId
       `);
 
-      // Delete Media
       await txRequest.query(`DELETE FROM PhanHoiMedia WHERE TinNhanId = @msgId`);
-
-      // Delete Message
       await txRequest.query(`DELETE FROM TinNhan WHERE MaTinNhan = @msgId`);
 
-      // Restore TinNhanCuoiId
       await txRequest.query(`
         UPDATE CuocTroChuyen
         SET TinNhanCuoiId = (
@@ -439,27 +371,12 @@ class ChatAdminService {
 
   async sendMessage(conversationId, adminId, content, files) {
     const pool = await poolPromise;
-    
-    // Kiểm tra quyền (bypass if Admin/Moderator)
-    const roleResultMsg = await pool.request()
-      .input('userId', sql.UniqueIdentifier, adminId)
-      .query(`
-        SELECT v.TenVaiTro 
-        FROM NguoiDung n
-        JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
-        WHERE n.MaNguoiDung = @userId
-      `);
-      
-    const userRoleMsg = roleResultMsg.recordset[0]?.TenVaiTro;
-    const isAdminUserMsg = userRoleMsg === 'Admin' || userRoleMsg === 'Moderator';
+    const userRole = await chatRepository.getUserRole(adminId);
+    const isAdminUser = userRole === 'Admin' || userRole === 'Moderator';
 
-    if (!isAdminUserMsg) {
-      const checkRole = await pool.request()
-        .input('convId', sql.UniqueIdentifier, conversationId)
-        .input('userId', sql.UniqueIdentifier, adminId)
-        .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @convId AND NguoiDungId = @userId`);
-        
-      if (checkRole.recordset.length === 0) {
+    if (!isAdminUser) {
+      const isMember = await chatRepository.isMember(conversationId, adminId);
+      if (!isMember) {
         throw new Error('Bạn không có quyền gửi tin nhắn vào cuộc trò chuyện này');
       }
     }
@@ -481,12 +398,13 @@ class ChatAdminService {
         
       const newMessage = insertResult.recordset[0];
       
-      // Update NgayCapNhat
-      await request.query(`
-        UPDATE CuocTroChuyen 
-        SET NgayCapNhat = GETDATE(), TinNhanCuoiId = '${newMessage.MaTinNhan}'
-        WHERE MaCuocTroChuyen = @convId
-      `);
+      await request
+        .input('lastMsgId', sql.UniqueIdentifier, newMessage.MaTinNhan)
+        .query(`
+          UPDATE CuocTroChuyen 
+          SET NgayCapNhat = GETDATE(), TinNhanCuoiId = @lastMsgId
+          WHERE MaCuocTroChuyen = @convId
+        `);
       
       const mediaList = [];
       if (files && files.length > 0) {
@@ -500,7 +418,7 @@ class ChatAdminService {
             .input('tinNhanId', sql.UniqueIdentifier, newMessage.MaTinNhan)
             .input('loaiPhanHoi', sql.NVarChar(20), 'tin_nhan')
             .input('loaiMedia', sql.NVarChar(10), loaiMedia)
-            .input('duongDanMedia', sql.VarChar(500), duongDanMedia)
+            .input('duongDanMedia', sql.VarChar(500), getFilenameOnly(duongDanMedia))
             .query(`
               INSERT INTO PhanHoiMedia (TinNhanId, LoaiPhanHoi, LoaiMedia, DuongDanMedia)
               VALUES (@tinNhanId, @loaiPhanHoi, @loaiMedia, @duongDanMedia)
@@ -515,22 +433,12 @@ class ChatAdminService {
 
       await transaction.commit();
       
-      const userResult = await pool.request()
-        .input('userId', sql.UniqueIdentifier, adminId)
-        .query(`
-          SELECT n.HoTen, n.AnhDaiDien, v.TenVaiTro, ch.TenCuaHang, ch.Logo
-          FROM NguoiDung n
-          JOIN VaiTro v ON n.VaiTroId = v.MaVaiTro
-          LEFT JOIN CuaHang ch ON n.MaNguoiDung = ch.NguoiBanId
-          WHERE n.MaNguoiDung = @userId
-        `);
-        
-      const userRow = userResult.recordset[0];
-      let name = userRow.HoTen;
-      let avatar = userRow.AnhDaiDien;
-      if (userRow.TenVaiTro === 'Seller') {
-        name = userRow.TenCuaHang || userRow.HoTen;
-        avatar = userRow.Logo || userRow.AnhDaiDien || null;
+      const userInfo = await chatRepository.getUserInfo(adminId);
+      let name = userInfo.HoTen;
+      let avatar = userInfo.AnhDaiDien;
+      if (userInfo.TenVaiTro === 'Seller') {
+        name = userInfo.TenCuaHang || userInfo.HoTen;
+        avatar = userInfo.Logo || userInfo.AnhDaiDien || null;
       }
         
       return {
@@ -557,29 +465,25 @@ class ChatAdminService {
       throw new Error('Danh sách thành viên không hợp lệ');
     }
 
-    // Lọc trùng lặp và loại bỏ chính Admin khỏi danh sách thành viên thêm mới
     const uniqueMemberIds = [...new Set(memberIds)].filter(id => id !== adminId);
-
     const pool = await poolPromise;
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
 
     try {
       const request = new sql.Request(transaction);
-
-      // Tạo cuộc trò chuyện
       const insertConvResult = await request
         .input('name', sql.NVarChar(255), name.trim())
         .input('type', sql.VarChar(50), 'nhom')
         .query(`
-          INSERT INTO CuocTroChuyen (TenCuocTroChuyen, Loai, NgayCapNhat)
+          INSERT INTO CuocTroChuyen (TenCuocTroChuyen, Loai, NgayTao, NgayCapNhat)
           OUTPUT INSERTED.MaCuocTroChuyen
-          VALUES (@name, @type, GETDATE())
+          VALUES (@name, @type, GETDATE(), GETDATE())
         `);
       
       const convId = insertConvResult.recordset[0].MaCuocTroChuyen;
 
-      // Thêm Admin vào nhóm (chu_nhom)
+      // Thêm Admin (chu_nhom)
       await request
         .input('convId', sql.UniqueIdentifier, convId)
         .input('adminId', sql.UniqueIdentifier, adminId)
@@ -589,10 +493,8 @@ class ChatAdminService {
           VALUES (@convId, @adminId, @roleAdmin)
         `);
 
-      // Thêm các thành viên khác
+      // Thêm thành viên
       for (const memberId of uniqueMemberIds) {
-        // Cần truyền biến cho mỗi thành viên. Tốt nhất là tạo request mới hoặc clear param.
-        // Nhưng thay vì vòng lặp với cùng request object, chúng ta tạo request mới cho an toàn
         const memberReq = new sql.Request(transaction);
         await memberReq
           .input('convId', sql.UniqueIdentifier, convId)
@@ -604,18 +506,17 @@ class ChatAdminService {
           `);
       }
 
-      // Thêm tin nhắn chào mừng
+      // Tin nhắn chào mừng
       const welcomeReq = new sql.Request(transaction);
       await welcomeReq
         .input('convId', sql.UniqueIdentifier, convId)
         .input('adminId', sql.UniqueIdentifier, adminId)
         .input('content', sql.NVarChar(sql.MAX), 'Nhóm đã được tạo. Chào mừng các thành viên!')
         .query(`
-          INSERT INTO TinNhan (CuocTroChuyenId, NguoiGuiId, NoiDung, NgayGui, DaDoc, DaThuHoi)
-          VALUES (@convId, @adminId, @content, GETDATE(), 0, 0)
+          INSERT INTO TinNhan (CuocTroChuyenId, NguoiGuiId, NoiDung, NgayGui, DaDoc)
+          VALUES (@convId, @adminId, @content, GETDATE(), 0)
         `);
 
-      // Cập nhật TinNhanCuoiId cho CuocTroChuyen
       await welcomeReq.query(`
         UPDATE CuocTroChuyen
         SET TinNhanCuoiId = (SELECT TOP 1 MaTinNhan FROM TinNhan WHERE CuocTroChuyenId = @convId ORDER BY NgayGui DESC),
@@ -647,47 +548,13 @@ class ChatAdminService {
 
     try {
       const request = new sql.Request(transaction);
+      request.input('groupId', sql.UniqueIdentifier, groupId);
 
-      // 1. Cập nhật TinNhanCuoiId thành NULL để tránh khóa ngoại vòng
-      await request
-        .input('groupId_upd', sql.UniqueIdentifier, groupId)
-        .query(`
-          UPDATE CuocTroChuyen
-          SET TinNhanCuoiId = NULL
-          WHERE MaCuocTroChuyen = @groupId_upd
-        `);
-
-      // 2. Xóa file đính kèm (PhanHoiMedia)
-      await request
-        .input('groupId_fdk', sql.UniqueIdentifier, groupId)
-        .query(`
-          DELETE FROM PhanHoiMedia
-          WHERE TinNhanId IN (SELECT MaTinNhan FROM TinNhan WHERE CuocTroChuyenId = @groupId_fdk)
-        `);
-
-      // 3. Xóa tin nhắn
-      await request
-        .input('groupId_tn', sql.UniqueIdentifier, groupId)
-        .query(`
-          DELETE FROM TinNhan
-          WHERE CuocTroChuyenId = @groupId_tn
-        `);
-
-      // 4. Xóa thành viên
-      await request
-        .input('groupId_tv', sql.UniqueIdentifier, groupId)
-        .query(`
-          DELETE FROM ThanhVienCuocTroChuyen
-          WHERE CuocTroChuyenId = @groupId_tv
-        `);
-
-      // 5. Xóa cuộc trò chuyện
-      await request
-        .input('groupId_ctc', sql.UniqueIdentifier, groupId)
-        .query(`
-          DELETE FROM CuocTroChuyen
-          WHERE MaCuocTroChuyen = @groupId_ctc
-        `);
+      await request.query(`UPDATE CuocTroChuyen SET TinNhanCuoiId = NULL WHERE MaCuocTroChuyen = @groupId`);
+      await request.query(`DELETE FROM PhanHoiMedia WHERE TinNhanId IN (SELECT MaTinNhan FROM TinNhan WHERE CuocTroChuyenId = @groupId)`);
+      await request.query(`DELETE FROM TinNhan WHERE CuocTroChuyenId = @groupId`);
+      await request.query(`DELETE FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @groupId`);
+      await request.query(`DELETE FROM CuocTroChuyen WHERE MaCuocTroChuyen = @groupId`);
 
       await transaction.commit();
       return true;
@@ -702,38 +569,13 @@ class ChatAdminService {
       throw new Error('Danh sách thành viên không hợp lệ');
     }
 
-    const pool = await poolPromise;
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-
-    try {
-      for (const memberId of memberIds) {
-        const memberReq = new sql.Request(transaction);
-        // Kiểm tra xem đã tham gia chưa
-        const check = await memberReq
-          .input('groupId', sql.UniqueIdentifier, groupId)
-          .input('memberId', sql.UniqueIdentifier, memberId)
-          .query(`SELECT 1 FROM ThanhVienCuocTroChuyen WHERE CuocTroChuyenId = @groupId AND NguoiDungId = @memberId`);
-        
-        if (check.recordset.length === 0) {
-          const insertReq = new sql.Request(transaction);
-          await insertReq
-            .input('groupId', sql.UniqueIdentifier, groupId)
-            .input('memberId', sql.UniqueIdentifier, memberId)
-            .input('role', sql.VarChar(50), 'thanh_vien')
-            .query(`
-              INSERT INTO ThanhVienCuocTroChuyen (CuocTroChuyenId, NguoiDungId, VaiTro)
-              VALUES (@groupId, @memberId, @role)
-            `);
-        }
+    for (const memberId of memberIds) {
+      const isMember = await chatRepository.isMember(groupId, memberId);
+      if (!isMember) {
+        await chatRepository.addMember(groupId, memberId, 'thanh_vien');
       }
-
-      await transaction.commit();
-      return true;
-    } catch (err) {
-      await transaction.rollback();
-      throw err;
     }
+    return true;
   }
 }
 

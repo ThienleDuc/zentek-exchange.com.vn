@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="avatarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#E2E8F0"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#0F172A" flood-opacity="0.05"/>
+    </filter>
+  </defs>
+  <rect width="200" height="200" rx="100" fill="url(#avatarGrad)"/>
+  <!-- User/Avatar Silhouette -->
+  <g filter="url(#shadow)" transform="translate(50, 50)">
+    <circle cx="50" cy="40" r="20" fill="#6366F1" fill-opacity="0.1" stroke="#6366F1" stroke-width="4"/>
+    <path d="M20 85C20 65.67 35.67 50 55 50H45C64.33 50 80 65.67 80 85" stroke="#475569" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

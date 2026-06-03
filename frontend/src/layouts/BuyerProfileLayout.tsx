@@ -49,7 +49,7 @@ const BuyerProfileLayout: React.FC = () => {
   // Mặc định cho Buyer
   return (
     <MainLayout>
-      <div className="bg-background min-h-screen py-8">
+      <div className="bg-gray-50 min-h-screen py-8">
         <div className="max-w-[1200px] mx-auto px-4 flex gap-6">
           <BuyerSidebar />
           

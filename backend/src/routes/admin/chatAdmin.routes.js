@@ -24,8 +24,8 @@ router.post('/:id/messages', uploadMediaMiddleware.array('files', 5), chatAdminC
 // Thu hồi tin nhắn
 router.put('/:id/messages/:msgId/recall', chatAdminController.recallMessage);
 
-// Xóa tin nhắn vĩnh viễn (Hard Delete)
-router.delete('/:id/messages/:msgId', chatAdminController.deleteMessage);
+// Xóa tin nhắn vĩnh viễn (Hard Delete) - chỉ Admin mới được phép
+router.delete('/:id/messages/:msgId', authorizeRoles('Admin'), chatAdminController.deleteMessage);
 
 // Xóa nhóm - Chỉ cho phép Admin, Moderator, Seller
 router.delete('/groups/:groupId', authorizeRoles('Admin', 'Moderator', 'Seller'), chatAdminController.deleteGroup);

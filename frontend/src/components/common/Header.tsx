@@ -3,8 +3,11 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { PATHS } from '../../utils/path.utils';
 import { storage } from '../../utils/storage.utils';
 import { isBuyer, isSeller, type User } from '../../utils/role.utils';
-import { User as UserIcon, LogOut, Store, ShoppingBag, ChevronDown, Search, ShoppingCart, X } from 'lucide-react';
+import { User as UserIcon, LogOut, Store, ShoppingBag, ChevronDown, Search, ShoppingCart, X, MessageSquare } from 'lucide-react';
+import { getUserAvatarUrl } from '../../utils/image.utils';
 import CategoryNav from './CategoryNav';
+import { cartService } from '../../services/cart.service';
+import { chatAdminService } from '../../services/chatAdmin.service';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +15,8 @@ const Header: React.FC = () => {
   const [user, setUser] = useState<User | null>(storage.getUser());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [cartCount, setCartCount] = useState<number>(0);
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Đóng dropdown khi chuyển trang
@@ -64,8 +69,63 @@ const Header: React.FC = () => {
       setUser(storage.getUser());
     };
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('user-updated', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('user-updated', handleStorageChange);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setCartCount(0);
+      setUnreadChatCount(0);
+      return;
+    }
+
+    const fetchCartData = async () => {
+      try {
+        if (!isSeller(user)) {
+          const cartRes = await cartService.getCart();
+          if (cartRes.success && Array.isArray(cartRes.data)) {
+            const count = cartRes.data.reduce((total: number, item: any) => total + (item.soLuong || 0), 0);
+            setCartCount(count);
+          }
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải giỏ hàng ở header:', err);
+      }
+    };
+
+    const fetchChatData = async () => {
+      try {
+        const conversations = await chatAdminService.getConversations('all');
+        if (Array.isArray(conversations)) {
+          const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+          setUnreadChatCount(totalUnread);
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải tin nhắn ở header:', err);
+      }
+    };
+
+    const fetchAll = () => {
+      fetchCartData();
+      fetchChatData();
+    };
+
+    fetchAll();
+    const interval = setInterval(fetchAll, 15000); // Poll every 15s
+
+    window.addEventListener('cart-updated', fetchCartData);
+    window.addEventListener('chat-updated', fetchChatData);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('cart-updated', fetchCartData);
+      window.removeEventListener('chat-updated', fetchChatData);
+    };
+  }, [user]);
 
   // Đóng dropdown khi click ra ngoài
   useEffect(() => {
@@ -127,13 +187,31 @@ const Header: React.FC = () => {
 
           {/* Navigation & Auth */}
           <div className="flex items-center gap-6">
+            {/* Tin nhắn (chỉ hiện khi đã đăng nhập) */}
+            {user && (
+              <Link 
+                to={isBuyer(user) ? PATHS.Buyer.MESSAGES : (isSeller(user) ? PATHS.Seller.MESSAGES : PATHS.ADMIN.MESSAGE_MANAGEMENT)} 
+                className="relative text-gray-600 hover:text-primary transition-colors mr-2"
+                title="Tin nhắn"
+              >
+                <MessageSquare size={26} />
+                {unreadChatCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                    {unreadChatCount}
+                  </span>
+                )}
+              </Link>
+            )}
+
             {/* Giỏ hàng (chỉ hiện khi KHÔNG phải seller) */}
             {(!user || !isSeller(user)) && (
-              <Link to={PATHS.Buyer.CART} className="relative text-gray-600 hover:text-primary transition-colors mr-2">
+              <Link to={PATHS.Buyer.CART} className="relative text-gray-600 hover:text-primary transition-colors mr-2" title="Giỏ hàng">
                 <ShoppingCart size={26} />
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
-                  0
-                </span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
+                    {cartCount}
+                  </span>
+                )}
               </Link>
             )}
 
@@ -160,7 +238,7 @@ const Header: React.FC = () => {
                 >
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 overflow-hidden border border-blue-200">
                     {user.avatar ? (
-                      <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                      <img src={getUserAvatarUrl(user.avatar)} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
                       <UserIcon size={16} />
                     )}

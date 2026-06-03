@@ -12,4 +12,9 @@ export const chatService = {
     const response = await api.post<{ success: boolean; message: string; data: { groupId: string } }>('/chats/join-group', { groupId });
     return response.data;
   }
+  ,
+  findOrCreatePrivateChat: async (otherUserId: string) => {
+    const response = await api.post<{ success: boolean; data: { conversationId: string } }>('/chats/private-find-or-create', { otherUserId });
+    return response.data;
+  }
 };

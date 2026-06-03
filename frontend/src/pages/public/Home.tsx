@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { storage } from '../../utils/storage.utils';
 import { getDashboardPath } from '../../utils/role.utils';
 import { productService } from '../../services/product.service';
-import { SERVER_URL } from '../../services/api';
+import { getProductImageUrl } from '../../utils/image.utils';
 
 // Interface cho sản phẩm
 interface Product {
@@ -91,12 +91,6 @@ const ProductSection: React.FC<ProductSectionProps> = ({ title, icon, sortBy, li
     navigate(`/san-pham/${product.MaSanPham}`);
   };
 
-  const getImageUrl = (path: string) => {
-    if (!path) return '/default-product.png';
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    return `${SERVER_URL}${path}`;
-  };
-
   return (
     <section className="product-section">
       <h2 className="section-title">
@@ -106,7 +100,7 @@ const ProductSection: React.FC<ProductSectionProps> = ({ title, icon, sortBy, li
         {products.map(product => (
           <article key={product.MaSanPham} className="product-card" onClick={() => handleProductClick(product)}>
             <figure className="product-image-wrapper">
-              <img src={getImageUrl(product.HinhAnh)} alt={product.TieuDe} className="product-image" loading="lazy" />
+              <img src={getProductImageUrl(product.HinhAnh)} alt={product.TieuDe} className="product-image" loading="lazy" />
               <figcaption className="condition-badge" data-condition={product.TinhTrang === 'Mới' ? 'new' : 'old'}>
                 {product.TinhTrang}
               </figcaption>

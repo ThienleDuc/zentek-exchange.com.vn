@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Star, Check, Film, ImageIcon, Loader2 } from 'lucide-react';
 import { orderAdminService, type OrderDetailItem } from '../../services/orderAdmin.service';
 import { uploadMedia } from '../../services/upload.service';
+import { getProductImageUrl } from '../../utils/image.utils';
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -247,7 +248,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ isOpen, onClose, orderId, ite
                 onClick={() => setActiveProductId(item.maSanPham)}
                 disabled={submitting}
               >
-                <img src={item.anh || 'https://picsum.photos/id/1/100/100'} alt={item.tenSanPham} className="chip-img" />
+                <img 
+                  src={getProductImageUrl(item.anh)} 
+                  alt={item.tenSanPham} 
+                  className="chip-img" 
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/default-product.svg';
+                  }}
+                />
                 <div className="chip-details">
                   <div className="chip-title">{item.tenSanPham}</div>
                   <div className="chip-meta">

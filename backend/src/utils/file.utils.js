@@ -187,7 +187,7 @@ const hideFile = (fileUrl) => {
     if (fs.existsSync(oldAbsolutePath)) {
       fs.renameSync(oldAbsolutePath, newAbsolutePath);
       console.log(`👁️ Đã ẩn file: ${fileName}`);
-      return `/uploads/hidden_media/${fileName}`;
+    return `/uploads/hidden_media/${fileName}`;
     }
     return null;
   } catch (error) {
@@ -196,10 +196,34 @@ const hideFile = (fileUrl) => {
   }
 };
 
+/**
+ * Trích xuất chỉ tên file từ đường dẫn (ví dụ: /uploads/images/xxx.png -> xxx.png)
+ * @param {string} pathStr - Đường dẫn hoặc tên file
+ * @returns {string|null}
+ */
+const getFilenameOnly = (pathStr) => {
+  if (!pathStr) return null;
+  if (
+    pathStr.startsWith('http://') ||
+    pathStr.startsWith('https://') ||
+    pathStr.startsWith('data:') ||
+    pathStr.startsWith('blob:')
+  ) {
+    return pathStr;
+  }
+  const idx = pathStr.indexOf('uploads/');
+  if (idx !== -1) {
+    const parts = pathStr.split('/');
+    return parts[parts.length - 1];
+  }
+  return pathStr;
+};
+
 module.exports = {
   uploadDocumentMiddleware,
   uploadImageMiddleware,
   uploadMediaMiddleware,
   deleteFile,
-  hideFile
+  hideFile,
+  getFilenameOnly
 };

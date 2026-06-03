@@ -11,6 +11,7 @@ import {
   getSellerTopProducts,
   getSellerRatingDistribution
 } from '../../services/profile.service';
+import { getProductImageUrl } from '../../utils/image.utils';
 
 // ==================== API SERVICES ====================
 
@@ -128,7 +129,7 @@ const SellerDashboard: React.FC = () => {
                   {topProducts.map((p, idx) => (
                     <tr key={p.id}>
                       <td>{idx+1}</td>
-                      <td><div className="product-name"><img src={p.image} alt="" />{p.name}</div></td>
+                      <td><div className="product-name"><img src={getProductImageUrl(p.image)} alt="" />{p.name}</div></td>
                       <td>{p.sold}</td>
                       <td>{formatCurrency(p.revenue)}</td>
                       <td>⭐ {p.rating}</td>

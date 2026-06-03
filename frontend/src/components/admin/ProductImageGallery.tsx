@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
+import { getProductImageUrl } from '../../utils/image.utils';
 
 interface ProductImageGalleryProps {
   images: any[];
@@ -30,7 +31,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({ images, activ
     <div className="flex flex-col gap-4">
       {/* Ảnh chính */}
       <div className="w-full aspect-square rounded-xl border border-border-default overflow-hidden bg-surface-muted relative group">
-        <img src={mainImage || ''} alt="Product Main" className="w-full h-full object-contain" />
+        <img src={getProductImageUrl(mainImage || '')} alt="Product Main" className="w-full h-full object-contain" />
       </div>
 
       {/* Danh sách ảnh phụ */}
@@ -43,7 +44,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({ images, activ
                 onClick={() => handleSelectImage(img.DuongDanAnh)}
                 className={`flex-shrink-0 w-20 h-20 rounded-lg border-2 overflow-hidden cursor-pointer snap-start transition-all ${mainImage === img.DuongDanAnh ? 'border-primary shadow-sm' : 'border-border-default hover:border-text-muted'}`}
               >
-                <img src={img.DuongDanAnh} alt={`Thumbnail ${index}`} className="w-full h-full object-cover" />
+                <img src={getProductImageUrl(img.DuongDanAnh)} alt={`Thumbnail ${index}`} className="w-full h-full object-cover" />
               </div>
             ))}
           </div>

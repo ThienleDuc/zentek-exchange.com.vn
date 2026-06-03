@@ -32,6 +32,37 @@ class UserController {
     }
   }
 
+  async getUserById(req, res) {
+    try {
+      const { id } = req.params;
+      const user = await userService.getUserById(id);
+      if (!user) return res.status(404).json({ success: false, message: 'Người dùng không tồn tại' });
+      res.json({ success: true, data: user });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async searchContacts(req, res) {
+    try {
+      const q = req.query.q || '';
+      const results = await userService.searchContacts(q);
+      res.json({ success: true, data: results });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  async searchStores(req, res) {
+    try {
+      const q = req.query.q || '';
+      const results = await userService.searchStores(q);
+      res.json({ success: true, data: results });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
   async createUser(req, res) {
     try {
       const { username, password, email, fullName, phone, roleId } = req.body;

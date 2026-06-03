@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Star, CheckCircle2, XCircle, Trash2, Undo, Share2, Check } from 'lucide-react';
 import type { ProductDetailType } from '../../../pages/admin/ProductDetail';
-import { SERVER_URL } from '../../../services/api';
+import { getProductImageUrl } from '../../../utils/image.utils';
 
 interface ProductInfoProps {
   product: ProductDetailType;
@@ -161,7 +161,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
               >
                 {variant.DuongDanAnh ? (
                   <img 
-                    src={variant.DuongDanAnh.startsWith('http') ? variant.DuongDanAnh : `${SERVER_URL}/uploads/products/${variant.DuongDanAnh}`} 
+                    src={getProductImageUrl(variant.DuongDanAnh)} 
                     alt={variant.TenPhanLoai} 
                     className="w-8 h-8 object-cover rounded-md border border-border-default/50"
                   />

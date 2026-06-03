@@ -4,57 +4,9 @@ import {
   BarChart, Bar
 } from 'recharts';
 import { TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
+import api from '../../services/api';
 
-// --- Mock data generators (đầy đủ) ---
-const generateRandomData = (days: number) => {
-  const data = [];
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-  for (let i = 0; i <= days; i++) {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + i);
-    data.push({
-      date: date.toISOString().slice(0, 10),
-      revenue: Math.floor(Math.random() * 10000000) + 5000000,
-      orders: Math.floor(Math.random() * 200) + 50,
-    });
-  }
-  return data;
-};
 
-const generateRandomKPIs = () => ({
-  newUsers: Math.floor(Math.random() * 500) + 100,
-  newStores: Math.floor(Math.random() * 50) + 10,
-  newProducts: Math.floor(Math.random() * 1000) + 200,
-  totalOrders: Math.floor(Math.random() * 2000) + 500,
-  totalRevenue: Math.floor(Math.random() * 50000000) + 10000000,
-  avgRating: (Math.random() * 2 + 3).toFixed(1),
-  cancelRate: (Math.random() * 15 + 2).toFixed(1),
-  pendingProducts: Math.floor(Math.random() * 300) + 50,
-});
-
-const generateGrowth = () => ({
-  revenue: (Math.random() * 40 - 10).toFixed(1),
-  orders: (Math.random() * 30 - 5).toFixed(1),
-  users: (Math.random() * 25 - 5).toFixed(1),
-  stores: (Math.random() * 20 - 5).toFixed(1),
-});
-
-const generateRatingDistribution = () => [
-  { stars: 1, count: Math.floor(Math.random() * 100) + 10 },
-  { stars: 2, count: Math.floor(Math.random() * 150) + 20 },
-  { stars: 3, count: Math.floor(Math.random() * 250) + 50 },
-  { stars: 4, count: Math.floor(Math.random() * 400) + 100 },
-  { stars: 5, count: Math.floor(Math.random() * 800) + 200 },
-];
-
-const generateTopCategories = () => [
-  { name: 'Thời trang nam', revenue: Math.floor(Math.random() * 20000000) + 5000000 },
-  { name: 'Thời trang nữ', revenue: Math.floor(Math.random() * 18000000) + 4000000 },
-  { name: 'Điện tử', revenue: Math.floor(Math.random() * 25000000) + 8000000 },
-  { name: 'Nhà cửa', revenue: Math.floor(Math.random() * 12000000) + 3000000 },
-  { name: 'Mỹ phẩm', revenue: Math.floor(Math.random() * 15000000) + 2000000 },
-];
 
 const AdminDashboard: React.FC = () => {
   // State
@@ -97,19 +49,18 @@ const AdminDashboard: React.FC = () => {
     setLoading({ kpi: true, chart: true, growth: true, rating: true, categories: true });
 
     try {
-      // Giả lập call API
-      const [kpi, chart, growth, rating, categories] = await Promise.all([
-        new Promise(resolve => setTimeout(() => resolve(generateRandomKPIs()), 800)),
-        new Promise(resolve => setTimeout(() => resolve(generateRandomData(30)), 1000)),
-        new Promise(resolve => setTimeout(() => resolve(generateGrowth()), 600)),
-        new Promise(resolve => setTimeout(() => resolve(generateRatingDistribution()), 700)),
-        new Promise(resolve => setTimeout(() => resolve(generateTopCategories()), 900)),
+      const [kpiRes, chartRes, growthRes, ratingRes, categoriesRes] = await Promise.all([
+        api.get(`/admin/stats/overview?from=${from}&to=${to}`),
+        api.get(`/admin/stats/revenue-chart?from=${from}&to=${to}`),
+        api.get(`/admin/stats/growth?from=${from}&to=${to}`),
+        api.get(`/admin/stats/rating-distribution?from=${from}&to=${to}`),
+        api.get(`/admin/stats/category-revenue?from=${from}&to=${to}`),
       ]);
-      setKpiData(kpi);
-      setChartData(chart as any[]);
-      setGrowthData(growth);
-      setRatingData(rating as any[]);
-      setCategoriesData(categories as any[]);
+      setKpiData(kpiRes.data.data);
+      setChartData(chartRes.data.data);
+      setGrowthData(growthRes.data.data);
+      setRatingData(ratingRes.data.data);
+      setCategoriesData(categoriesRes.data.data);
     } catch (err) {
       setError('Không thể tải dữ liệu. Vui lòng thử lại.');
       console.error(err);

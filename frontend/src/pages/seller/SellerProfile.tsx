@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getProvinces, getProvinceTree } from '../../services/location.service';
 import SearchableDropdown from '../../components/SearchableDropdown';
+import { getStoreLogoUrl } from '../../utils/image.utils';
 import { getSellerProfile, updateSellerProfile, sendOtp as sendOtpApi } from '../../services/profile.service';
 import { uploadImage } from '../../services/upload.service';
 import { storage } from '../../utils/storage.utils';
@@ -38,8 +39,8 @@ const SellerProfile: React.FC = () => {
         const { user, shop } = response.data;
         setUser(user);
         setShop(shop);
-        setAvatarPreview(user.anhDaiDien || '/default-avatar.png');
-        setLogoPreview(shop?.logo || '/default-shop.png');
+        setAvatarPreview(user.anhDaiDien ? getStoreLogoUrl(user.anhDaiDien) : '/default-avatar.svg');
+        setLogoPreview(shop?.logo ? getStoreLogoUrl(shop.logo) : '/default-shop.svg');
         
         const provs = await getProvinces();
         setListTinh(provs);
@@ -50,14 +51,13 @@ const SellerProfile: React.FC = () => {
             const tree = await getProvinceTree(selectedProv.code);
             if (tree) {
               setAllDistrictsOfProvince(tree.districts || []);
-              const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
-                ...w,
-                district_code: d.code
-              })));
-              setListPhuong(flatWards);
-              const matchingDist = (tree.districts || []).find(d => d.name === shop.quanHuyen);
-              if (matchingDist) {
-                setListQuan([matchingDist]);
+              setListQuan(tree.districts || []);
+              
+              if (shop.quanHuyen) {
+                const matchingDist = (tree.districts || []).find(d => d.name === shop.quanHuyen);
+                if (matchingDist) {
+                  setListPhuong(matchingDist.wards || []);
+                }
               }
             }
           }
@@ -106,6 +106,7 @@ const SellerProfile: React.FC = () => {
               ...currentUser,
               avatar: res.url || undefined
             });
+            window.dispatchEvent(new CustomEvent('user-updated'));
           }
           alert('Cập nhật ảnh đại diện thành công!');
         } else {
@@ -123,7 +124,7 @@ const SellerProfile: React.FC = () => {
 
   const handleCancelAvatar = () => {
     setAvatarFile(null);
-    setAvatarPreview(user?.anhDaiDien || '/default-avatar.png');
+    setAvatarPreview(user?.anhDaiDien ? getStoreLogoUrl(user.anhDaiDien) : '/default-avatar.svg');
   };
 
   const handleSaveLogo = async () => {
@@ -156,7 +157,7 @@ const SellerProfile: React.FC = () => {
 
   const handleCancelLogo = () => {
     setLogoFile(null);
-    setLogoPreview(shop?.logo || '/default-shop.png');
+    setLogoPreview(shop?.logo ? getStoreLogoUrl(shop.logo) : '/default-shop.svg');
   };
 
   const handleUserChange = (field: string, value: any) => {
@@ -180,27 +181,7 @@ const SellerProfile: React.FC = () => {
       const tree = await getProvinceTree(selectedProv.code);
       if (tree) {
         setAllDistrictsOfProvince(tree.districts || []);
-        const flatWards = (tree.districts || []).flatMap(d => (d.wards || []).map(w => ({
-          ...w,
-          district_code: d.code
-        })));
-        setListPhuong(flatWards);
-      }
-    }
-  };
-
-  // Khi thay đổi phường/xã
-  const handlePhuongChange = (phuongName: string) => {
-    handleShopChange('phuongXa', phuongName);
-    handleShopChange('quanHuyen', '');
-    setListQuan([]);
-    const ward = listPhuong.find(w => w.name === phuongName);
-    if (ward) {
-      const distCode = ward.district_code;
-      const matchingDist = allDistrictsOfProvince.find(d => d.code === distCode);
-      if (matchingDist) {
-        setListQuan([matchingDist]);
-        handleShopChange('quanHuyen', matchingDist.name);
+        setListQuan(tree.districts || []);
       }
     }
   };
@@ -208,6 +189,18 @@ const SellerProfile: React.FC = () => {
   // Khi thay đổi quận/huyện
   const handleQuanChange = (quanName: string) => {
     handleShopChange('quanHuyen', quanName);
+    handleShopChange('phuongXa', '');
+    setListPhuong([]);
+    
+    const matchingDist = allDistrictsOfProvince.find(d => d.name === quanName);
+    if (matchingDist) {
+      setListPhuong(matchingDist.wards || []);
+    }
+  };
+
+  // Khi thay đổi phường/xã
+  const handlePhuongChange = (phuongName: string) => {
+    handleShopChange('phuongXa', phuongName);
   };
 
   const handleSave = async () => {
@@ -230,6 +223,7 @@ const SellerProfile: React.FC = () => {
             email: user.email,
             avatar: user.anhDaiDien || undefined
           });
+          window.dispatchEvent(new CustomEvent('user-updated'));
         }
         alert('Cập nhật thành công!');
       } else {
@@ -267,199 +261,227 @@ const SellerProfile: React.FC = () => {
 
   return (
     <div className="seller-profile-page">
-      <div className="profile-header">
-        <div className="title-with-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 13c-2.33 0-4.31-1.46-5.11-3.5h10.22c-.8 2.04-2.78 3.5-5.11 3.5z" fill="currentColor"/>
-          </svg>
-          <h1>Hồ sơ cửa hàng</h1>
+      {/* Banner hồ sơ */}
+      <div className="seller-profile-banner">
+        <div className="seller-profile-banner-overlay"></div>
+        <div className="seller-profile-banner-content">
+          <h2>Hồ sơ cửa hàng: {shop.tenCuaHang}</h2>
+          <p>Quản lý thông tin tài khoản người bán, cấu hình địa chỉ lấy hàng và loại hình pháp lý kinh doanh của bạn.</p>
         </div>
       </div>
 
-      <div className="profile-single-block">
-        {/* Ảnh đại diện và logo */}
-        <div className="image-row">
-          <div className="image-upload">
-            <label>Ảnh đại diện</label>
-            <div className="image-preview">
-              <img src={avatarPreview || '/default-avatar.png'} alt="Avatar" />
-            </div>
-            <div className="upload-button-wrapper">
-              {!avatarFile ? (
-                <label className="btn-upload">
-                  Đổi ảnh
-                  <input type="file" accept="image/*" onChange={handleAvatarChange} hidden />
-                </label>
-              ) : (
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                  <button type="button" className="btn-save-image" onClick={handleSaveAvatar} disabled={uploadingAvatar}>
-                    {uploadingAvatar ? 'Đang lưu...' : 'Lưu'}
-                  </button>
-                  <button type="button" className="btn-cancel-image" onClick={handleCancelAvatar} disabled={uploadingAvatar}>
-                    Hủy
-                  </button>
+      <div className="profile-layout-grid">
+        {/* Cột trái: Avatar & Logo, Trạng thái pháp lý */}
+        <div className="profile-sidebar-column">
+          {/* Card upload hình ảnh */}
+          <div className="profile-card profile-card--images">
+            <h3>Hình ảnh thương hiệu</h3>
+            
+            <div className="image-upload-wrapper">
+              <div className="image-upload-item">
+                <label>Ảnh đại diện người bán</label>
+                <div className="image-preview-circle">
+                  <img src={avatarPreview || '/default-avatar.svg'} alt="Avatar" />
                 </div>
-              )}
+                {!avatarFile ? (
+                  <label className="btn-upload">
+                    Đổi ảnh
+                    <input type="file" accept="image/*" onChange={handleAvatarChange} hidden />
+                  </label>
+                ) : (
+                  <div className="btn-group-mini">
+                    <button type="button" className="btn-save-image" onClick={handleSaveAvatar} disabled={uploadingAvatar}>
+                      {uploadingAvatar ? '...' : 'Lưu'}
+                    </button>
+                    <button type="button" className="btn-cancel-image" onClick={handleCancelAvatar} disabled={uploadingAvatar}>
+                      Hủy
+                    </button>
+                  </div>
+                )}
+                <span className="file-note">JPG, PNG</span>
+              </div>
+
+              <div className="image-upload-item">
+                <label>Logo cửa hàng</label>
+                <div className="image-preview-circle">
+                  <img src={logoPreview || '/default-shop.svg'} alt="Logo" />
+                </div>
+                {!logoFile ? (
+                  <label className="btn-upload">
+                    Đổi ảnh
+                    <input type="file" accept="image/*" onChange={handleLogoChange} hidden />
+                  </label>
+                ) : (
+                  <div className="btn-group-mini">
+                    <button type="button" className="btn-save-image" onClick={handleSaveLogo} disabled={uploadingLogo}>
+                      {uploadingLogo ? '...' : 'Lưu'}
+                    </button>
+                    <button type="button" className="btn-cancel-image" onClick={handleCancelLogo} disabled={uploadingLogo}>
+                      Hủy
+                    </button>
+                  </div>
+                )}
+                <span className="file-note">Tỉ lệ 1:1</span>
+              </div>
             </div>
-            <span className="file-note">Hỗ trợ JPG, PNG</span>
           </div>
-          <div className="image-upload">
-            <label>Logo cửa hàng</label>
-            <div className="image-preview">
-              <img src={logoPreview || '/default-shop.png'} alt="Logo" />
+
+          {/* Card trạng thái xác thực */}
+          <div className="profile-card profile-card--status">
+            <h3>Xác thực pháp lý</h3>
+            <div className={`status-badge-large ${shop.daXacThucPhapLy ? 'verified' : 'unverified'}`}>
+              <div className="status-dot"></div>
+              <span>{shop.daXacThucPhapLy ? 'Đã xác thực pháp lý' : 'Chưa xác thực pháp lý'}</span>
             </div>
-            <div className="upload-button-wrapper">
-              {!logoFile ? (
-                <label className="btn-upload">
-                  Đổi ảnh
-                  <input type="file" accept="image/*" onChange={handleLogoChange} hidden />
-                </label>
-              ) : (
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                  <button type="button" className="btn-save-image" onClick={handleSaveLogo} disabled={uploadingLogo}>
-                    {uploadingLogo ? 'Đang lưu...' : 'Lưu'}
-                  </button>
-                  <button type="button" className="btn-cancel-image" onClick={handleCancelLogo} disabled={uploadingLogo}>
-                    Hủy
-                  </button>
-                </div>
-              )}
-            </div>
-            <span className="file-note">Logo vuông đẹp nhất</span>
+            <p className="status-desc">
+              {shop.daXacThucPhapLy 
+                ? 'Cửa hàng của bạn đã hoàn tất xác thực thông tin pháp lý và có thể tham gia đầy đủ các tính năng kinh doanh trên hệ thống.'
+                : 'Vui lòng liên hệ quản trị viên và cung cấp giấy phép kinh doanh / MST để hoàn tất quy trình xác thực.'}
+            </p>
           </div>
         </div>
 
-        {/* Thông tin tài khoản */}
-        <div className="info-section">
-          <h3>Thông tin tài khoản</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Họ và tên</label>
-              <input type="text" value={user.hoTen} onChange={(e) => handleUserChange('hoTen', e.target.value)} />
+        {/* Cột phải: Form thông tin chi tiết */}
+        <div className="profile-main-column">
+          {/* Card thông tin tài khoản */}
+          <div className="profile-card">
+            <h3>Thông tin tài khoản</h3>
+            
+            <div className="form-row">
+              <div className="form-group">
+                <label>Họ và tên</label>
+                <input type="text" value={user.hoTen} onChange={(e) => handleUserChange('hoTen', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Tên đăng nhập</label>
+                <input type="text" value={user.tenDangNhap} disabled />
+              </div>
             </div>
-            <div className="form-group">
-              <label>Tên đăng nhập</label>
-              <input type="text" value={user.tenDangNhap} disabled />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Email</label>
-              <input type="email" value={user.email} onChange={(e) => handleUserChange('email', e.target.value)} />
-            </div>
-            <div className="form-group">
-              <label>Số điện thoại</label>
-              <input type="text" value={user.soDienThoai} onChange={(e) => handleUserChange('soDienThoai', e.target.value)} />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Ngày tham gia</label>
-              <input type="text" value={formatDate(user.ngayTao)} disabled />
-            </div>
-          </div>
-        </div>
 
-        {/* Thông tin cửa hàng */}
-        <div className="info-section">
-          <h3>Thông tin cửa hàng</h3>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Tên cửa hàng</label>
-              <input type="text" value={shop.tenCuaHang} onChange={(e) => handleShopChange('tenCuaHang', e.target.value)} />
+            <div className="form-row">
+              <div className="form-group">
+                <label>Email</label>
+                <input type="email" value={user.email} onChange={(e) => handleUserChange('email', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Số điện thoại</label>
+                <input type="text" value={user.soDienThoai} onChange={(e) => handleUserChange('soDienThoai', e.target.value)} />
+              </div>
             </div>
-            <div className="form-group">
-              <label>Số điện thoại cửa hàng</label>
-              <input type="text" value={shop.soDienThoai} onChange={(e) => handleShopChange('soDienThoai', e.target.value)} />
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Ngày tham gia hệ thống</label>
+                <input type="text" value={formatDate(user.ngayTao)} disabled />
+              </div>
             </div>
-          </div>
-          <div className="form-group full-width">
-            <label>Mô tả cửa hàng</label>
-            <textarea value={shop.moTa || ''} onChange={(e) => handleShopChange('moTa', e.target.value)} rows={3} />
           </div>
 
-          {/* Địa chỉ: dropdown và địa chỉ chi tiết */}
-          <div className="form-group full-width">
-            <label>Địa chỉ</label>
-            <div className="address-group">
-              <SearchableDropdown
-                theme="admin"
-                options={listTinh.map((t) => ({ value: t.name, label: t.name }))}
-                value={shop.tinhThanh}
-                onChange={(val) => handleTinhChange(val as string)}
-                placeholder="Chọn Tỉnh/Thành"
-              />
-              <SearchableDropdown
-                theme="admin"
-                options={listPhuong.map((p) => ({ value: p.name, label: p.name }))}
-                value={shop.phuongXa}
-                onChange={(val) => handlePhuongChange(val as string)}
-                placeholder="Chọn Phường/Xã"
-                disabled={!shop.tinhThanh}
-              />
-              <SearchableDropdown
-                theme="admin"
-                options={listQuan.map((q) => ({ value: q.name, label: q.name }))}
-                value={shop.quanHuyen}
-                onChange={(val) => handleQuanChange(val as string)}
-                placeholder="Chọn Quận/Huyện"
-                disabled={!shop.phuongXa}
-              />
+          {/* Card thông tin cửa hàng */}
+          <div className="profile-card">
+            <h3>Thông tin kinh doanh</h3>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Tên cửa hàng <span className="required-star">*</span></label>
+                <input type="text" value={shop.tenCuaHang} onChange={(e) => handleShopChange('tenCuaHang', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Số điện thoại cửa hàng <span className="required-star">*</span></label>
+                <input type="text" value={shop.soDienThoai} onChange={(e) => handleShopChange('soDienThoai', e.target.value)} />
+              </div>
+            </div>
+
+            <div className="form-group full-width">
+              <label>Mô tả cửa hàng</label>
+              <textarea value={shop.moTa || ''} onChange={(e) => handleShopChange('moTa', e.target.value)} rows={3} placeholder="Giới thiệu ngắn gọn về cửa hàng của bạn..." />
+            </div>
+
+            <div className="form-group full-width AddressSection">
+              <label>Địa chỉ lấy hàng</label>
+              <div className="address-dropdown-grid">
+                <SearchableDropdown
+                  theme="admin"
+                  options={listTinh.map((t) => ({ value: t.name, label: t.name }))}
+                  value={shop.tinhThanh}
+                  onChange={(val) => handleTinhChange(val as string)}
+                  placeholder="Chọn Tỉnh/Thành"
+                />
+                <SearchableDropdown
+                  theme="admin"
+                  options={listQuan.map((q) => ({ value: q.name, label: q.name }))}
+                  value={shop.quanHuyen}
+                  onChange={(val) => handleQuanChange(val as string)}
+                  placeholder="Chọn Quận/Huyện"
+                  disabled={!shop.tinhThanh}
+                />
+                <SearchableDropdown
+                  theme="admin"
+                  options={listPhuong.map((p) => ({ value: p.name, label: p.name }))}
+                  value={shop.phuongXa}
+                  onChange={(val) => handlePhuongChange(val as string)}
+                  placeholder="Chọn Phường/Xã"
+                  disabled={!shop.quanHuyen}
+                />
+              </div>
               <input
                 type="text"
-                placeholder="Số nhà, đường"
+                placeholder="Địa chỉ cụ thể (Số nhà, ngõ, đường...)"
                 value={shop.diaChi}
+                className="address-detail-input"
                 onChange={(e) => handleShopChange('diaChi', e.target.value)}
               />
             </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Loại hình kinh doanh</label>
+                <select value={shop.loaiHinhCuaHang} onChange={(e) => handleShopChange('loaiHinhCuaHang', parseInt(e.target.value))}>
+                  <option value={1}>Cá nhân tự do</option>
+                  <option value={2}>Hộ kinh doanh gia đình</option>
+                  <option value={3}>Doanh nghiệp / Công ty</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Mã số thuế</label>
+                <input type="text" value={shop.maSoThue} placeholder="MST đăng ký kinh doanh" onChange={(e) => handleShopChange('maSoThue', e.target.value)} />
+              </div>
+            </div>
+            
+            <div className="form-row">
+              <div className="form-group">
+                <label>Ngày thành lập cửa hàng</label>
+                <input type="text" value={formatDate(shop.ngayTao)} disabled />
+              </div>
+            </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>Loại hình cửa hàng</label>
-              <select value={shop.loaiHinhCuaHang} onChange={(e) => handleShopChange('loaiHinhCuaHang', parseInt(e.target.value))}>
-                <option value={1}>Cá nhân</option>
-                <option value={2}>Hộ kinh doanh</option>
-                <option value={3}>Doanh nghiệp nhỏ</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Mã số thuế</label>
-              <input type="text" value={shop.maSoThue} onChange={(e) => handleShopChange('maSoThue', e.target.value)} />
+          {/* Card OTP & Save */}
+          <div className="profile-card profile-card--actions">
+            <div className="action-flex-wrapper">
+              <div className="otp-verification-box">
+                <label>Xác thực số điện thoại</label>
+                <div className="otp-input-row">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="Mã OTP 6 số"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  />
+                  <button className="btn-send-otp" onClick={handleSendOtp} disabled={!user?.soDienThoai}>
+                    {otpSent ? 'Gửi lại OTP' : 'Nhận OTP'}
+                  </button>
+                </div>
+                <span className="otp-hint">OTP được gửi đến số điện thoại tài khoản của người bán</span>
+              </div>
+              <button className="btn-save-profile" onClick={handleSave} disabled={saving}>
+                {saving ? 'Đang lưu...' : 'Lưu hồ sơ cửa hàng'}
+              </button>
             </div>
           </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Trạng thái xác thực</label>
-              <input type="text" value={shop.daXacThucPhapLy ? 'Đã xác thực' : 'Chưa xác thực'} disabled />
-            </div>
-            <div className="form-group">
-              <label>Ngày tạo cửa hàng</label>
-              <input type="text" value={formatDate(shop.ngayTao)} disabled />
-            </div>
-          </div>
-        </div>
-
-        {/* Hàng OTP và nút lưu */}
-        <div className="action-row">
-          <div className="otp-group">
-            <input
-              type="text"
-              maxLength={6}
-              placeholder="Nhập mã OTP 6 số"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-            />
-            <button className="btn-send-otp" onClick={handleSendOtp} disabled={!user?.soDienThoai}>
-              {otpSent ? 'Gửi lại mã' : 'Gửi mã'}
-            </button>
-          </div>
-          <button className="btn-save" onClick={handleSave} disabled={saving}>
-            {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
-          </button>
         </div>
       </div>
-
       <div className="dev-note">[API Hệ thống] Dữ liệu thực tế được đồng bộ hóa.</div>
     </div>
   );

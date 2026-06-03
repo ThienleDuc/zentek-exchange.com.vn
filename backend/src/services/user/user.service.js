@@ -60,6 +60,20 @@ class UserService {
     }
     return true;
   }
+
+  async getUserById(userId) {
+    return await userRepository.getUserById(userId);
+  }
+
+  async searchContacts(q) {
+    if (!q || q.trim() === '') return [];
+    return await userRepository.searchContacts(q.trim());
+  }
+
+  async searchStores(q) {
+    if (!q || q.trim() === '') return [];
+    return await userRepository.searchStores(q.trim());
+  }
 }
 
 module.exports = new UserService();

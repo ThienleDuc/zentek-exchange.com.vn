@@ -4,13 +4,48 @@ import { PATHS } from '../../utils/path.utils';
 import { LayoutDashboard, Users, Store, Package, LogOut, ChevronDown, User as UserIcon, MessageSquare } from 'lucide-react';
 import { storage } from '../../utils/storage.utils';
 import { type User } from '../../utils/role.utils';
+import { getUserAvatarUrl } from '../../utils/image.utils';
+import { chatAdminService } from '../../services/chatAdmin.service';
 
 const AdminSidebar = () => {
   const navigate = useNavigate();
-  const [user] = useState<User | null>(storage.getUser());
+  const [user, setUser] = useState<User | null>(storage.getUser());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [unreadChatCount, setUnreadChatCount] = useState<number>(0);
+
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      setUser(storage.getUser());
+    };
+    window.addEventListener('user-updated', handleUserUpdate);
+    return () => window.removeEventListener('user-updated', handleUserUpdate);
+  }, []);
+
+  useEffect(() => {
+    const fetchChatData = async () => {
+      try {
+        const conversations = await chatAdminService.getConversations('all');
+        if (Array.isArray(conversations)) {
+          const totalUnread = conversations.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+          setUnreadChatCount(totalUnread);
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải tin nhắn ở admin sidebar:', err);
+      }
+    };
+
+    fetchChatData();
+    const interval = setInterval(fetchChatData, 15000); // Poll every 15s
+
+    window.addEventListener('chat-updated', fetchChatData);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('chat-updated', fetchChatData);
+    };
+  }, []);
 
   const handleLogout = () => {
     storage.clearAuth();
@@ -70,7 +105,7 @@ const AdminSidebar = () => {
           >
             <div className="admin-sidebar-avatar">
               {user?.avatar ? (
-                <img src={user.avatar} alt="Avatar" />
+                <img src={getUserAvatarUrl(user.avatar)} alt="Avatar" />
               ) : (
                 <UserIcon size={20} />
               )}
@@ -105,7 +140,14 @@ const AdminSidebar = () => {
                     `admin-sidebar-link ${isActive ? 'active' : ''}`
                   }
                 >
-                  {item.icon}
+                  <div className="relative flex items-center justify-center">
+                    {item.icon}
+                    {item.path === PATHS.ADMIN.MESSAGE_MANAGEMENT && unreadChatCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white">
+                        {unreadChatCount}
+                      </span>
+                    )}
+                  </div>
                   <span>{item.title}</span>
                 </NavLink>
               </li>

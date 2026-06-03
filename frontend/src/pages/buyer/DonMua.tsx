@@ -4,10 +4,11 @@ import { Clock, Truck, CheckCircle, XCircle, Package, ChevronRight, Search, Clip
 import { PATHS } from '../../utils/path.utils';
 import { getUserFromStorage, isBuyer, isSeller } from '../../utils/role.utils';
 import { orderAdminService, type OrderDetailItem } from '../../services/orderAdmin.service';
-import { chatClientService } from '../../services/chatClient.service';
+import { chatService } from '../../services/chat.service';
 import { cartService } from '../../services/cart.service';
 import ReviewModal from '../../components/buyer/ReviewModal';
 import PaginationProduct from '../../components/common/PaginationProduct';
+import { getProductImageUrl } from '../../utils/image.utils';
 
 // Định nghĩa kiểu dữ liệu
 interface OrderItem {
@@ -135,7 +136,15 @@ const OrderCard: React.FC<{ order: Order; role: 'buyer' | 'seller'; onAction: (a
       <div className="don-mua__items">
         {order.items.slice(0, 2).map((item, idx) => (
           <div key={idx} className="don-mua__item">
-            <img src={item.anh || 'https://picsum.photos/id/1/100/100'} alt={item.tenSanPham} className="don-mua__item-img" />
+            <img 
+              src={getProductImageUrl(item.anh)} 
+              alt={item.tenSanPham} 
+              className="don-mua__item-img" 
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = '/default-product.svg';
+              }}
+            />
             <div className="don-mua__item-details">
               <div className="don-mua__item-name">{item.tenSanPham}</div>
               {item.phanLoai && <div className="don-mua__item-variant">Phân loại: {item.phanLoai}</div>}
@@ -320,14 +329,9 @@ const DonMua: React.FC = () => {
             return;
           }
 
-          // Kiểm tra và tạo phòng chat riêng tư
-          const checkRes = await chatClientService.checkPrivateChatExists(otherUserId);
-          let conversationId = checkRes.data.conversationId;
-
-          if (!checkRes.data.exists || !conversationId) {
-            const createRes = await chatClientService.createPrivateChat(otherUserId);
-            conversationId = createRes.data.conversationId;
-          }
+          // Tìm hoặc tạo phòng chat riêng tư (1 bước duy nhất)
+          const res = await chatService.findOrCreatePrivateChat(otherUserId);
+          const conversationId = res.data?.conversationId;
 
           if (conversationId) {
             if (role === 'buyer') {
