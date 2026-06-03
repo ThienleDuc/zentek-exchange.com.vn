@@ -48,7 +48,7 @@ class SellerDashboardController {
           SELECT 
             @TotalOrders = COUNT(DISTINCT dh.MaDonHang),
             @CancelRate = CASE WHEN COUNT(DISTINCT dh.MaDonHang) > 0 
-                               THEN (SUM(CASE WHEN dh.TrangThaiDon = N'Đã hủy' THEN 1 ELSE 0 END) * 100.0) / COUNT(DISTINCT dh.MaDonHang)
+                               THEN (COUNT(DISTINCT CASE WHEN dh.TrangThaiDon = N'Đã hủy' THEN dh.MaDonHang END) * 100.0) / COUNT(DISTINCT dh.MaDonHang)
                                ELSE 0.0 END
           FROM ChiTietDonHang ctdh
           INNER JOIN DonHang dh ON ctdh.DonHangId = dh.MaDonHang
@@ -247,12 +247,16 @@ class SellerDashboardController {
             sp.MaSanPham AS id,
             sp.TieuDe AS name,
             (SELECT TOP 1 DuongDanAnh FROM AnhSanPham WHERE SanPhamId = sp.MaSanPham ORDER BY LaAnhChinh DESC, NgayTao ASC) AS image,
-            ISNULL(SUM(ctdh.SoLuong), 0) AS sold,
-            ISNULL(SUM(ctdh.SoLuong * ctdh.DonGia), 0) AS revenue,
+            ISNULL(SUM(ct.SoLuong), 0) AS sold,
+            ISNULL(SUM(ct.SoLuong * ct.DonGia), 0) AS revenue,
             sp.DiemDanhGia AS rating
           FROM SanPham sp
-          LEFT JOIN ChiTietDonHang ctdh ON ctdh.SanPhamId = sp.MaSanPham
-          LEFT JOIN DonHang dh ON ctdh.DonHangId = dh.MaDonHang AND dh.TrangThaiDon != N'Đã hủy'
+          LEFT JOIN (
+            SELECT ctdh.SanPhamId, ctdh.SoLuong, ctdh.DonGia
+            FROM ChiTietDonHang ctdh
+            INNER JOIN DonHang dh ON ctdh.DonHangId = dh.MaDonHang
+            WHERE dh.TrangThaiDon != N'Đã hủy'
+          ) ct ON ct.SanPhamId = sp.MaSanPham
           WHERE sp.CuaHangId = @storeId
           GROUP BY sp.MaSanPham, sp.TieuDe, sp.DiemDanhGia
           ORDER BY sold DESC, revenue DESC;

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Star, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import type { ProductDetailType } from '../../../pages/admin/ProductDetail';
 import productSellerService from '../../../services/productSeller.service';
-import { getMediaUrl } from '../../../utils/image.utils';
+import { getMediaUrl, getUserAvatarUrl } from '../../../utils/image.utils';
+import ContactCardModal from '../chat/ContactCardModal';
+import { userService } from '../../../services/user.service';
 
 interface ProductReviewsProps {
   product: ProductDetailType;
@@ -12,10 +15,38 @@ interface ProductReviewsProps {
 }
 
 const ProductReviews: React.FC<ProductReviewsProps> = ({ product, currentUserId, role = 'buyer', onRefresh }) => {
+  const navigate = useNavigate();
   const [filterStar, setFilterStar] = useState<number | null>(null);
   const [replyingReview, setReplyingReview] = useState<any | null>(null);
   const [replyText, setReplyText] = useState('');
   const [submittingReply, setSubmittingReply] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [contactUser, setContactUser] = useState<any | null>(null);
+
+  const handleAvatarClick = async (userId: string, userName: string, userAvatar?: string | null) => {
+    if (!userId) return;
+    if (currentUserId && userId.toLowerCase() === currentUserId.toLowerCase()) return;
+
+    try {
+      const res = await userService.getUserById(userId);
+      const userData = res.data || {};
+      setContactUser({
+        userId: userData.userId || userId,
+        fullName: userData.fullName || userName,
+        avatar: userData.avatar || userAvatar,
+        phone: userData.phone || null,
+        email: userData.email || null,
+        roleName: userData.roleName || null,
+        createdAt: userData.createdAt || null,
+        storeName: userData.storeName || null,
+        storeLogo: userData.storeLogo || null
+      });
+      setIsContactModalOpen(true);
+    } catch (e) {
+      setContactUser({ userId, fullName: userName, avatar: userAvatar });
+      setIsContactModalOpen(true);
+    }
+  };
 
   const handleOpenReply = (review: any) => {
     setReplyingReview(review);
@@ -142,7 +173,24 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ product, currentUserId,
               {sortedReviews.map(r => (
                 <div key={r.MaDanhGia} className="border-b border-border-default pb-6 last:border-0 last:pb-0">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">{r.TenNguoiMua?.charAt(0)}</div>
+                    <div 
+                      onClick={() => handleAvatarClick(r.NguoiMuaId, r.TenNguoiMua, r.AnhDaiDien)}
+                      className={`w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-sm font-bold text-primary bg-primary/20 overflow-hidden ${
+                        currentUserId && r.NguoiMuaId?.toLowerCase() === currentUserId.toLowerCase() 
+                          ? 'cursor-default' 
+                          : 'cursor-pointer hover:opacity-80 transition-opacity'
+                      }`}
+                    >
+                      {r.AnhDaiDien ? (
+                        <img 
+                          src={getUserAvatarUrl(r.AnhDaiDien)} 
+                          alt={r.TenNguoiMua} 
+                          className="w-full h-full object-cover" 
+                        />
+                      ) : (
+                        r.TenNguoiMua?.charAt(0)
+                      )}
+                    </div>
                     <div className="flex-1">
                       <div className="font-semibold text-text-main text-sm">{r.TenNguoiMua}</div>
                       <div className="flex text-yellow-500 mt-1 mb-2">
@@ -266,6 +314,21 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ product, currentUserId,
           </div>
         </div>
       )}
+
+      <ContactCardModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+        user={contactUser}
+        onContactCreated={(convId) => {
+          if (role === 'admin') {
+            navigate(`/admin/messages?chatId=${convId}`);
+          } else if (role === 'seller') {
+            navigate(`/seller/chat?chatId=${convId}`);
+          } else {
+            navigate(`/buyer/tin-nhan?chatId=${convId}`);
+          }
+        }}
+      />
     </div>
   );
 };
