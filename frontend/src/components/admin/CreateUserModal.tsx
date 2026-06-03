@@ -257,6 +257,10 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose, onSu
                 placeholder="0912345678"
               />
             </div>
+
+            {!isEditMode && (
+              <input type="hidden" name="roleId" value={formData.roleId} />
+            )}
           </div>
 
           {error && <p className="text-danger text-sm mt-2">{error}</p>}

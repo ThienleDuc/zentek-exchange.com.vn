@@ -175,10 +175,10 @@ class UserRepository {
         .input('Id', sql.UniqueIdentifier, id)
         .input('HoTen', sql.NVarChar(100), fullName)
         .input('SoDienThoai', sql.Char(10), phone ? phone.trim() : null)
-        .input('VaiTroId', sql.UniqueIdentifier, roleId)
+        .input('VaiTroId', sql.UniqueIdentifier, roleId || null)
         .query(`
           UPDATE NguoiDung
-          SET HoTen = @HoTen, SoDienThoai = @SoDienThoai, VaiTroId = @VaiTroId, NgayCapNhat = GETDATE()
+          SET HoTen = @HoTen, SoDienThoai = @SoDienThoai, VaiTroId = ISNULL(@VaiTroId, VaiTroId), NgayCapNhat = GETDATE()
           WHERE MaNguoiDung = @Id
         `);
       return result.rowsAffected[0] > 0;
