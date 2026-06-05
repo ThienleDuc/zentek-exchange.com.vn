@@ -7,6 +7,7 @@ import { orderAdminService, type OrderDetailItem } from '../../services/orderAdm
 import { chatService } from '../../services/chat.service';
 import { cartService } from '../../services/cart.service';
 import ReviewModal from '../../components/buyer/ReviewModal';
+import ReplyReviewModal from '../../components/seller/ReplyReviewModal';
 import PaginationProduct from '../../components/common/PaginationProduct';
 import { getProductImageUrl } from '../../utils/image.utils';
 
@@ -191,6 +192,11 @@ const DonMua: React.FC = () => {
   const [reviewOrderId, setReviewOrderId] = useState<string>('');
   const [reviewItems, setReviewItems] = useState<OrderDetailItem[]>([]);
 
+  // Reply Review Modal States
+  const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
+  const [replyOrderId, setReplyOrderId] = useState<string>('');
+  const [replyItems, setReplyItems] = useState<OrderDetailItem[]>([]);
+
   // Cancellation Modal States
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
@@ -217,6 +223,7 @@ const DonMua: React.FC = () => {
           daDanhGia: order.daDanhGia,
           shopId: order.shopId,
           buyerId: order.buyerId,
+          daTraLoi: order.daTraLoi,
           items: order.items.map((item: any) => ({
             maSanPham: item.maSanPham,
             tenSanPham: item.tenSanPham,
@@ -366,7 +373,19 @@ const DonMua: React.FC = () => {
         break;
 
       case 'replyReview':
-        alert(`Chức năng trả lời đánh giá đơn hàng ${orderId} sẽ sớm được cập nhật.`);
+        try {
+          setLoading(true);
+          const res = await orderAdminService.getOrderDetails(orderId);
+          if (res.success && res.data) {
+            setReplyItems(res.data.items);
+            setReplyOrderId(orderId);
+            setIsReplyModalOpen(true);
+          }
+        } catch (err: any) {
+          alert(err.response?.data?.message || err.message || 'Lỗi khi tải chi tiết đơn hàng để phản hồi.');
+        } finally {
+          setLoading(false);
+        }
         break;
 
       default:
@@ -531,6 +550,19 @@ const DonMua: React.FC = () => {
           if (firstProductId) {
             navigate(PATHS.PUPLIC.PRODUCT_DETAIL.replace(':id', firstProductId));
           }
+        }}
+      />
+      {/* Reply Review Modal */}
+      <ReplyReviewModal
+        isOpen={isReplyModalOpen}
+        onClose={() => {
+          setIsReplyModalOpen(false);
+          fetchOrders();
+        }}
+        orderId={replyOrderId}
+        items={replyItems}
+        onSuccess={() => {
+          fetchOrders();
         }}
       />
     </div>

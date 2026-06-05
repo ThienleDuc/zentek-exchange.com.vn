@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Store, Building2, CheckCircle2, Plus, Eye, Edit, Shield } from 'lucide-react';
+import { Search, Store, Building2, CheckCircle2, Plus, Eye, Edit, Shield, Lock, Unlock } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, BarChart, Bar, CartesianGrid, XAxis, YAxis } from 'recharts';
 import api from '../../services/api';
 import Pagination from '../../components/common/Pagination';
@@ -120,6 +120,27 @@ const ShopManagement = () => {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
     setPage(1);
+  };
+
+  const handleToggleLock = (shop: Shop) => {
+    const actionName = shop.TrangThai ? 'Khóa' : 'Mở khóa';
+    showAlert(
+      'confirm',
+      `Xác nhận ${actionName.toLowerCase()}`,
+      `Bạn có chắc chắn muốn ${actionName.toLowerCase()} cửa hàng "${shop.TenCuaHang}"?`,
+      async () => {
+        try {
+          const response = await api.put(`/shops/${shop.MaCuaHang}/status`);
+          if (response.data.success) {
+            showAlert('success', 'Thành công', `Đã ${actionName.toLowerCase()} cửa hàng thành công.`);
+            fetchShops();
+            fetchStats();
+          }
+        } catch (err: any) {
+          showAlert('error', 'Lỗi', err.response?.data?.message || 'Có lỗi xảy ra.');
+        }
+      }
+    );
   };
 
   const getStatusBadge = (daXacThuc: boolean, trangThai: boolean) => {
@@ -402,6 +423,19 @@ const ShopManagement = () => {
                               >
                                 {!shop.DaXacThucPhapLy ? <CheckCircle2 className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                               </button>
+                              {shop.DaXacThucPhapLy && (
+                                <button
+                                  onClick={() => handleToggleLock(shop)}
+                                  className={`p-1.5 rounded-lg transition-colors border ${
+                                    shop.TrangThai 
+                                      ? 'text-danger bg-danger/10 hover:bg-danger/20 border-danger/20' 
+                                      : 'text-secondary bg-secondary/10 hover:bg-secondary/20 border-secondary/20'
+                                  }`}
+                                  title={shop.TrangThai ? 'Khóa cửa hàng' : 'Mở khóa cửa hàng'}
+                                >
+                                  {shop.TrangThai ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                                </button>
+                              )}
                               <button
                                 onClick={() => {
                                   setShopToEdit(shop);

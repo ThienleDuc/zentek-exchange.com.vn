@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Store, MessageCircle } from 'lucide-react';
 import type { ProductDetailType } from '../../../pages/admin/ProductDetail';
 import { getStoreLogoUrl } from '../../../utils/image.utils';
@@ -9,6 +10,14 @@ interface ProductShopInfoProps {
 }
 
 const ProductShopInfo: React.FC<ProductShopInfoProps> = ({ product, onContact }) => {
+  const navigate = useNavigate();
+
+  const handleVisitShop = () => {
+    if (product.CuaHangId) {
+      navigate(`/cua-hang/${product.CuaHangId}`);
+    }
+  };
+
   return (
     <div className="bg-surface rounded-xl shadow-sm border border-border-default p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
       <div className="flex items-center gap-4">
@@ -27,14 +36,26 @@ const ProductShopInfo: React.FC<ProductShopInfoProps> = ({ product, onContact })
           <div className="text-sm text-text-muted mt-1 flex items-center gap-1">
             <Store className="w-4 h-4" /> {product.CuaHangDiaChi}
           </div>
-          {onContact && (
-            <button 
-              onClick={onContact}
-              className="mt-3 flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg transition-all text-xs font-bold shadow-sm"
-            >
-              <MessageCircle className="w-3.5 h-3.5" /> Liên hệ
-            </button>
-          )}
+          <div className="flex gap-2 mt-3 flex-wrap">
+            {onContact && (
+              <>
+                <button 
+                  onClick={onContact}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg transition-all text-xs font-bold shadow-sm"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" /> Liên hệ
+                </button>
+                {product.CuaHangId && (
+                  <button 
+                    onClick={handleVisitShop}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-border-default hover:bg-surface-muted text-text-body rounded-lg transition-all text-xs font-bold shadow-sm"
+                  >
+                    <Store className="w-3.5 h-3.5" /> Xem cửa hàng
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex gap-4 text-sm">

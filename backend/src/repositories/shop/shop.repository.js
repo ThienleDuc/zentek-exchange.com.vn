@@ -147,7 +147,8 @@ class ShopRepository {
           TinhThanh = @TinhThanh, 
           SoDienThoai = @SoDienThoai, 
           LoaiHinhCuaHang = @LoaiHinhCuaHang, 
-          MaSoThue = @MaSoThue
+          MaSoThue = @MaSoThue,
+          DaXacThucPhapLy = 0
         WHERE NguoiBanId = @SellerId
       `);
 

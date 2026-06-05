@@ -32,6 +32,17 @@ class StoreController {
       res.status(500).json({ success: false, message: 'Lỗi server' });
     }
   }
+
+  async getStoreDetail(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await storeService.getStoreDetail(id);
+      res.json(result);
+    } catch (error) {
+      console.error('Lỗi khi lấy chi tiết cửa hàng:', error);
+      res.status(error.message.includes('không tồn tại') ? 404 : 500).json({ success: false, message: error.message || 'Lỗi server' });
+    }
+  }
 }
 
 module.exports = new StoreController();

@@ -96,8 +96,15 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       {/* Out of Stock Notice Banner */}
       {(product.DaHetHang === 1 || product.DaHetHang === true || product.SoLuong === 0) && (
         <div className="mb-4 px-4 py-3 bg-danger/10 border border-danger/20 text-danger rounded-lg flex items-center gap-2 text-sm font-bold animate-in fade-in slide-in-from-top-1 duration-150">
-          <span className="w-2 h-2 rounded-full bg-danger animate-pulse shrink-0"></span>
+          <span className="w-2.5 h-2.5 rounded-full bg-danger animate-pulse shrink-0"></span>
           <span>Sản phẩm này hiện đang TẠM HẾT HÀNG</span>
+        </div>
+      )}
+
+      {product.CuaHangTrangThai === false && (
+        <div className="mb-4 px-4 py-3 bg-danger/10 border border-danger/20 text-danger rounded-lg flex items-center gap-2 text-sm font-bold animate-in fade-in slide-in-from-top-1 duration-150">
+          <span className="w-2.5 h-2.5 rounded-full bg-danger animate-pulse shrink-0"></span>
+          <span>Cửa hàng của sản phẩm này hiện đã bị khóa</span>
         </div>
       )}
 
@@ -179,25 +186,33 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       <div className="flex gap-3 pt-4 border-t border-border-default mt-6">
         {role === 'admin' && handleAction && (
           <div className="flex flex-col gap-3 w-full">
-            {product.TrangThaiDuyet === 'Chờ phê duyệt' && (
-              <div className="flex gap-3 w-full">
-                <button onClick={() => handleAction('Đã từ chối', 'Từ chối sản phẩm này?')} className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-danger/10 text-danger border border-danger hover:bg-danger hover:text-white rounded-lg transition-colors text-sm font-bold">
-                  <XCircle className="w-4 h-4" /> TỪ CHỐI
-                </button>
-                <button onClick={() => handleAction('Đã duyệt', 'Duyệt sản phẩm này?')} className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/30 rounded-lg transition-colors text-sm font-bold">
-                  <CheckCircle2 className="w-4 h-4" /> PHÊ DUYỆT
-                </button>
+            {product.CuaHangTrangThai === false ? (
+              <div className="p-3 bg-danger/10 border border-danger/25 text-danger text-center rounded-lg text-sm font-semibold w-full">
+                Không thể thực hiện thao tác phê duyệt vì cửa hàng đã bị khóa.
               </div>
-            )}
-            {product.TrangThaiDuyet !== 'Chờ phê duyệt' && (
-              <button onClick={() => handleAction('Chờ phê duyệt', 'Hủy phê duyệt và chuyển về trạng thái chờ?')} className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-warning/10 text-warning border border-warning hover:bg-warning hover:text-white rounded-lg transition-colors text-sm font-bold">
-                <Undo className="w-4 h-4" /> HỦY PHÊ DUYỆT
-              </button>
-            )}
-            {product.TrangThaiDuyet === 'Đã duyệt' && (
-              <button onClick={() => handleAction('Đã gỡ', 'Gỡ bài vi phạm?')} className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-danger text-white hover:bg-danger-hover shadow-md shadow-danger/30 rounded-lg transition-colors text-sm font-bold">
-                <Trash2 className="w-4 h-4" /> GỠ BÀI VI PHẠM
-              </button>
+            ) : (
+              <>
+                {product.TrangThaiDuyet === 'Chờ phê duyệt' && (
+                  <div className="flex gap-3 w-full">
+                    <button onClick={() => handleAction('Đã từ chối', 'Từ chối sản phẩm này?')} className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-danger/10 text-danger border border-danger hover:bg-danger hover:text-white rounded-lg transition-colors text-sm font-bold">
+                      <XCircle className="w-4 h-4" /> TỪ CHỐI
+                    </button>
+                    <button onClick={() => handleAction('Đã duyệt', 'Duyệt sản phẩm này?')} className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/30 rounded-lg transition-colors text-sm font-bold">
+                      <CheckCircle2 className="w-4 h-4" /> PHÊ DUYỆT
+                    </button>
+                  </div>
+                )}
+                {product.TrangThaiDuyet !== 'Chờ phê duyệt' && (
+                  <button onClick={() => handleAction('Chờ phê duyệt', 'Hủy phê duyệt và chuyển về trạng thái chờ?')} className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-warning/10 text-warning border border-warning hover:bg-warning hover:text-white rounded-lg transition-colors text-sm font-bold">
+                    <Undo className="w-4 h-4" /> HỦY PHÊ DUYỆT
+                  </button>
+                )}
+                {product.TrangThaiDuyet === 'Đã duyệt' && (
+                  <button onClick={() => handleAction('Đã gỡ', 'Gỡ bài vi phạm?')} className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-danger text-white hover:bg-danger-hover shadow-md shadow-danger/30 rounded-lg transition-colors text-sm font-bold">
+                    <Trash2 className="w-4 h-4" /> GỠ BÀI VI PHẠM
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}

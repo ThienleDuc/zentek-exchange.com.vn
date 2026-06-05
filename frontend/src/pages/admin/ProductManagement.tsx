@@ -11,6 +11,7 @@ import { isSeller } from '../../utils/role.utils';
 import { storage } from '../../utils/storage.utils';
 import ProductEditModal from '../../components/admin/ProductEditModal';
 import { getProductImageUrl } from '../../utils/image.utils';
+import { getSellerProfile } from '../../services/profile.service';
 
 export interface Product {
   MaSanPham: string;
@@ -145,6 +146,31 @@ const ProductManagement = () => {
     }
   };
 
+  const checkShopStatusAndRun = async (action: () => void) => {
+    try {
+      const res = await getSellerProfile();
+      if (res.success && res.data?.shop) {
+        if (!res.data.shop.daXacThucPhapLy || !res.data.shop.trangThai) {
+          alert('Cửa hàng của bạn phải được xác thực pháp lý và đang hoạt động để thực hiện thao tác này.');
+          return;
+        }
+        action();
+      } else {
+        alert('Không tìm thấy thông tin cửa hàng của bạn.');
+      }
+    } catch (err: any) {
+      console.error('Lỗi khi kiểm tra trạng thái cửa hàng:', err);
+      alert(err.message || 'Không thể xác thực thông tin cửa hàng vào lúc này. Vui lòng thử lại sau.');
+    }
+  };
+
+  const handleAddProductClick = () => {
+    checkShopStatusAndRun(() => {
+      setEditingProduct(null);
+      setIsEditModalOpen(true);
+    });
+  };
+
   const fetchStats = async () => {
     try {
       const data = isSellerUser
@@ -257,7 +283,7 @@ const ProductManagement = () => {
         </h2>
         {isSellerUser && (
           <button
-            onClick={() => { setEditingProduct(null); setIsEditModalOpen(true); }}
+            onClick={handleAddProductClick}
             className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg transition-colors font-medium text-sm shadow-md"
           >
             <Plus className="w-4 h-4" />
@@ -616,7 +642,7 @@ const ProductManagement = () => {
                                 <Eye size={16} />
                               </button>
                               <button
-                                onClick={() => { setEditingProduct(p); setIsEditModalOpen(true); }}
+                                onClick={() => checkShopStatusAndRun(() => { setEditingProduct(p); setIsEditModalOpen(true); })}
                                 className="p-2 text-yellow-500 hover:bg-yellow-500/10 rounded-xl transition border border-yellow-500/20 hover:border-yellow-500/40 bg-yellow-500/5"
                                 title="Chỉnh sửa"
                               >
@@ -624,7 +650,7 @@ const ProductManagement = () => {
                               </button>
                               {(p.DaHetHang === 1 || p.DaHetHang === true || p.SoLuong === 0) ? (
                                 <button
-                                  onClick={() => handleInStockClick(p)}
+                                  onClick={() => checkShopStatusAndRun(() => handleInStockClick(p))}
                                   className="p-2 text-green-500 hover:bg-green-500/10 rounded-xl transition border border-green-500/20 hover:border-green-500/40 bg-green-500/5"
                                   title="Xác nhận còn hàng"
                                 >
@@ -632,7 +658,7 @@ const ProductManagement = () => {
                                 </button>
                               ) : (
                                 <button
-                                  onClick={() => handleOutOfStockClick(p)}
+                                  onClick={() => checkShopStatusAndRun(() => handleOutOfStockClick(p))}
                                   className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition border border-red-500/20 hover:border-red-500/40 bg-red-500/5"
                                   title="Xác nhận hết hàng"
                                 >

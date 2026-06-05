@@ -11,7 +11,9 @@ class ProductService {
       .query(`
         SELECT COUNT(*) as total 
         FROM SanPham sp
+        JOIN CuaHang ch ON sp.CuaHangId = ch.MaCuaHang
         WHERE sp.TrangThaiDuyet = N'Đã duyệt' AND sp.TrangThaiHienThi = 1
+          AND ch.DaXacThucPhapLy = 1 AND ch.TrangThai = 1
       `);
     const total = countResult.recordset[0].total;
 
@@ -24,7 +26,9 @@ class ProductService {
       SELECT sp.MaSanPham, sp.TieuDe, sp.Gia, sp.SoLuongDaBan, sp.TinhTrang, sp.DaHetHang,
              (SELECT TOP 1 DuongDanAnh FROM AnhSanPham WHERE SanPhamId = sp.MaSanPham AND LaAnhChinh = 1) AS HinhAnh
       FROM SanPham sp
+      JOIN CuaHang ch ON sp.CuaHangId = ch.MaCuaHang
       WHERE sp.TrangThaiDuyet = N'Đã duyệt' AND sp.TrangThaiHienThi = 1
+        AND ch.DaXacThucPhapLy = 1 AND ch.TrangThai = 1
       ORDER BY ${orderBy}
       OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY;
     `;
@@ -51,7 +55,7 @@ class ProductService {
     request.input('offset', sql.Int, offset);
     request.input('limit', sql.Int, parseInt(limit));
 
-    let whereClause = `WHERE sp.TrangThaiDuyet = N'Đã duyệt' AND sp.TrangThaiHienThi = 1`;
+    let whereClause = `WHERE sp.TrangThaiDuyet = N'Đã duyệt' AND sp.TrangThaiHienThi = 1 AND ch.DaXacThucPhapLy = 1 AND ch.TrangThai = 1`;
 
     if (province) {
       const normProvince = province.replace(/^Thành phố\s+/i, '').replace(/^Tỉnh\s+/i, '').replace(/^TP\.\s+/i, '').trim();
@@ -120,9 +124,14 @@ class ProductService {
     }
 
     if (store) {
-      whereClause += ` AND (ch.TenCuaHang = @store OR ch.MaCuaHang = @store)`;
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(store);
-      request.input('store', isUuid ? sql.UniqueIdentifier : sql.NVarChar, store);
+      if (isUuid) {
+        whereClause += ` AND ch.MaCuaHang = @store`;
+        request.input('store', sql.UniqueIdentifier, store);
+      } else {
+        whereClause += ` AND ch.TenCuaHang = @store`;
+        request.input('store', sql.NVarChar, store);
+      }
     }
 
     let orderBy = 'sp.NgayDang DESC';
@@ -196,7 +205,7 @@ class ProductService {
       queryText = `
         SELECT 
           sp.*,
-          ch.TenCuaHang, ch.Logo, ch.DiaChi as CuaHangDiaChi, ch.LoaiHinhCuaHang,
+          ch.TenCuaHang, ch.Logo, ch.DiaChi as CuaHangDiaChi, ch.LoaiHinhCuaHang, ch.NguoiBanId,
           dm.TenDanhMuc,
           dmCha.TenDanhMuc as TenDanhMucCha,
           (SELECT COUNT(*) FROM ChiTietGioHang ct WHERE ct.SanPhamId = sp.MaSanPham) as SoLuongGioHangThucTe
@@ -211,7 +220,7 @@ class ProductService {
       queryText = `
         SELECT 
           sp.*,
-          ch.TenCuaHang, ch.Logo, ch.DiaChi as CuaHangDiaChi, ch.LoaiHinhCuaHang,
+          ch.TenCuaHang, ch.Logo, ch.DiaChi as CuaHangDiaChi, ch.LoaiHinhCuaHang, ch.NguoiBanId,
           dm.TenDanhMuc,
           dmCha.TenDanhMuc as TenDanhMucCha,
           (SELECT COUNT(*) FROM ChiTietGioHang ct WHERE ct.SanPhamId = sp.MaSanPham) as SoLuongGioHangThucTe
@@ -288,6 +297,21 @@ class ProductService {
     return result.recordset[0].MaCuaHang;
   }
 
+  async checkStoreVerificationAndGetId(userId) {
+    const pool = await poolPromise;
+    const result = await pool.request()
+      .input('userId', sql.UniqueIdentifier, userId)
+      .query('SELECT MaCuaHang, DaXacThucPhapLy, TrangThai FROM CuaHang WHERE NguoiBanId = @userId');
+    if (result.recordset.length === 0) {
+      throw new Error('Bạn không có cửa hàng đăng ký bán hàng.');
+    }
+    const store = result.recordset[0];
+    if (!store.DaXacThucPhapLy || !store.TrangThai) {
+      throw new Error('Cửa hàng của bạn phải được xác thực pháp lý và đang hoạt động để thực hiện thao tác này.');
+    }
+    return store.MaCuaHang;
+  }
+
   async getSellerProducts(sellerId) {
     const storeId = await this.getSellerStore(sellerId);
     const pool = await poolPromise;
@@ -315,7 +339,7 @@ class ProductService {
       .query(`
         SELECT 
           sp.*,
-          ch.TenCuaHang, ch.Logo, ch.DiaChi as CuaHangDiaChi, ch.LoaiHinhCuaHang,
+          ch.TenCuaHang, ch.Logo, ch.DiaChi as CuaHangDiaChi, ch.LoaiHinhCuaHang, ch.NguoiBanId,
           dm.TenDanhMuc,
           dmCha.TenDanhMuc as TenDanhMucCha
         FROM SanPham sp
@@ -473,7 +497,7 @@ class ProductService {
       throw new Error('Vui lòng chọn danh mục hợp lệ.');
     }
 
-    const storeId = await this.getSellerStore(sellerId);
+    const storeId = await this.checkStoreVerificationAndGetId(sellerId);
     const pool = await poolPromise;
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
@@ -594,7 +618,7 @@ class ProductService {
       throw new Error('Vui lòng chọn danh mục hợp lệ.');
     }
 
-    const storeId = await this.getSellerStore(sellerId);
+    const storeId = await this.checkStoreVerificationAndGetId(sellerId);
     const pool = await poolPromise;
     
     // First check ownership
@@ -763,7 +787,7 @@ class ProductService {
   }
 
   async setOutOfStock(productId, sellerId) {
-    const storeId = await this.getSellerStore(sellerId);
+    const storeId = await this.checkStoreVerificationAndGetId(sellerId);
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, productId)
@@ -784,7 +808,7 @@ class ProductService {
   }
 
   async setInStock(productId, sellerId, quantity = 1) {
-    const storeId = await this.getSellerStore(sellerId);
+    const storeId = await this.checkStoreVerificationAndGetId(sellerId);
     const pool = await poolPromise;
     const result = await pool.request()
       .input('id', sql.UniqueIdentifier, productId)

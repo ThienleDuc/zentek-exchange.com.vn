@@ -40,6 +40,7 @@ export interface SellerProfileResponse {
       loaiHinhCuaHang: number;
       maSoThue: string;
       daXacThucPhapLy: boolean;
+      trangThai: boolean;
       ngayTao: string;
     } | null;
   };

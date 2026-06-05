@@ -18,6 +18,12 @@ export const storeService = {
   getStores: async (params?: StoreSearchParams) => {
     const response = await api.get('/stores', { params });
     return response.data;
+  },
+
+  // Lấy chi tiết cửa hàng
+  getStoreDetail: async (id: string) => {
+    const response = await api.get(`/stores/${id}`);
+    return response.data;
   }
 };
 

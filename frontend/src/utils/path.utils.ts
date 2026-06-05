@@ -49,6 +49,7 @@ export const PATHS = {
     HOME: '/',
     SEARCH: '/search',
     STORES: '/stores',
+    STORE_DETAIL: '/cua-hang/:id',
     PRODUCTS: '/products',
     PRODUCT_DETAIL: '/san-pham/:id'
   }

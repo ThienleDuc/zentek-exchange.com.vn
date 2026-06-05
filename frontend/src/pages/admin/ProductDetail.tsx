@@ -6,6 +6,7 @@ import { productService } from '../../services/product.service';
 import productSellerService from '../../services/productSeller.service';
 import { cartService } from '../../services/cart.service';
 import { orderService } from '../../services/order.service';
+import { chatService } from '../../services/chat.service';
 import { storage } from '../../utils/storage.utils';
 import { isAdmin, isSeller, isBuyer } from '../../utils/role.utils';
 import { PATHS } from '../../utils/path.utils';
@@ -41,6 +42,10 @@ export interface ProductDetailType {
   variations: any[];
   reviews: any[];
   DaHetHang?: boolean | number;
+  NguoiBanId?: string;
+  CuaHangId?: string;
+  CuaHangTrangThai?: boolean;
+  CuaHangDaXacThucPhapLy?: boolean;
 }
 
 const ProductDetail = () => {
@@ -57,6 +62,7 @@ const ProductDetail = () => {
   const isAdminView = location.pathname.startsWith('/admin');
   const isSellerView = location.pathname.startsWith('/seller');
   const currentUser = storage.getUser();
+  const currentUserId = currentUser?.id || currentUser?.MaNguoiDung;
 
   let role: 'admin' | 'seller' | 'buyer' = 'buyer';
   if (currentUser) {
@@ -291,7 +297,7 @@ const ProductDetail = () => {
       });
   };
 
-  const handleContactSeller = () => {
+  const handleContactSeller = async () => {
     if (!currentUser) {
       setAlertConfig({
         isOpen: true,
@@ -306,6 +312,25 @@ const ProductDetail = () => {
     }
 
     if (!product) return;
+
+    if (product.NguoiBanId) {
+      try {
+        const res = await chatService.findOrCreatePrivateChat(product.NguoiBanId);
+        const conversationId = res.data?.conversationId;
+        if (conversationId) {
+          if (isBuyer(currentUser)) {
+            navigate(`/buyer/tin-nhan?chatId=${conversationId}`);
+          } else if (isSeller(currentUser)) {
+            navigate(`/seller/chat?chatId=${conversationId}`);
+          } else if (isAdmin(currentUser)) {
+            navigate(`/admin/messages?chatId=${conversationId}`);
+          }
+          return;
+        }
+      } catch (err) {
+        console.error('Lỗi khi kết nối chat:', err);
+      }
+    }
 
     if (isBuyer(currentUser)) {
       navigate(`/buyer/tin-nhan?store=${encodeURIComponent(product.TenCuaHang)}`);
@@ -372,12 +397,19 @@ const ProductDetail = () => {
       </div>
 
       {/* 3. Shop Info Banner */}
-      <ProductShopInfo product={product} onContact={handleContactSeller} />
+      <ProductShopInfo 
+        product={product} 
+        onContact={
+          currentUserId && product?.NguoiBanId && String(currentUserId).toLowerCase() === String(product.NguoiBanId).toLowerCase()
+            ? undefined
+            : handleContactSeller
+        } 
+      />
 
       {/* 4. Bottom Block (Đánh giá) */}
       <ProductReviews 
         product={product} 
-        currentUserId={currentUser?.MaNguoiDung} 
+        currentUserId={currentUserId ? String(currentUserId) : undefined} 
         role={role}
         onRefresh={fetchDetail}
       />

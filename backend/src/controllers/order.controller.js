@@ -433,6 +433,19 @@ class OrderController {
 
           const tongTien = itemsResult.recordset.reduce((sum, item) => sum + Number(item.thanhTien), 0);
 
+          // Check if buyer has rated and seller has replied
+          const reviewsResult = await pool.request()
+            .input('DonHangId', sql.UniqueIdentifier, order.MaDonHang)
+            .query('SELECT TraLoiNoiDung FROM DanhGiaSanPham WHERE DonHangId = @DonHangId');
+
+          let daTraLoi = true;
+          if (reviewsResult.recordset.length > 0) {
+            const hasUnreplied = reviewsResult.recordset.some(r => r.TraLoiNoiDung === null || r.TraLoiNoiDung === undefined || r.TraLoiNoiDung.trim() === '');
+            if (hasUnreplied) {
+              daTraLoi = false;
+            }
+          }
+
           orders.push({
             maDonHang: order.MaDonHang,
             ngayTao: order.NgayTao,
@@ -440,6 +453,7 @@ class OrderController {
             tongTien,
             buyerId: order.NguoiMuaId,
             shopId: shopId,
+            daTraLoi,
             items: itemsResult.recordset
           });
         }
@@ -704,7 +718,6 @@ class OrderController {
         return res.status(403).json({ success: false, message: 'Bạn không có quyền xem thông tin đơn hàng này.' });
       }
 
-      // 3. Fetch items in order details
       const itemsResult = await pool.request()
         .input('OrderId', sql.UniqueIdentifier, orderId)
         .input('BuyerId', sql.UniqueIdentifier, order.NguoiMuaId)
@@ -718,21 +731,27 @@ class OrderController {
             ch.NguoiBanId AS sellerId,
             ch.MaCuaHang AS shopId,
             (SELECT TOP 1 DuongDanAnh FROM AnhSanPham WHERE SanPhamId = sp.MaSanPham AND LaAnhChinh = 1) AS anh,
-            (SELECT CASE WHEN EXISTS (
-               SELECT 1 FROM DanhGiaSanPham 
-               WHERE DonHangId = ct.DonHangId AND SanPhamId = ct.SanPhamId AND NguoiMuaId = @BuyerId
-             ) THEN 1 ELSE 0 END) AS daDanhGia
+            CASE WHEN dg.MaDanhGia IS NOT NULL THEN 1 ELSE 0 END AS daDanhGia,
+            dg.MaDanhGia AS reviewId,
+            dg.SoSao AS reviewSoSao,
+            dg.NoiDung AS reviewNoiDung,
+            dg.TraLoiNoiDung AS reviewTraLoiNoiDung
           FROM ChiTietDonHang ct
           JOIN SanPham sp ON ct.SanPhamId = sp.MaSanPham
           LEFT JOIN PhanLoai pl ON ct.PhanLoaiId = pl.MaPhanLoai
           JOIN CuaHang ch ON sp.CuaHangId = ch.MaCuaHang
+          LEFT JOIN DanhGiaSanPham dg ON dg.DonHangId = ct.DonHangId AND dg.SanPhamId = ct.SanPhamId AND dg.NguoiMuaId = @BuyerId
           WHERE ct.DonHangId = @OrderId
         `);
 
-      // Map check rated SQL to boolean
+      // Map check rated SQL to boolean and include review fields
       const items = itemsResult.recordset.map(item => ({
         ...item,
-        daDanhGia: item.daDanhGia === 1
+        daDanhGia: item.daDanhGia === 1,
+        reviewId: item.reviewId || null,
+        reviewSoSao: item.reviewSoSao || null,
+        reviewNoiDung: item.reviewNoiDung || null,
+        reviewTraLoiNoiDung: item.reviewTraLoiNoiDung || null
       }));
 
       const total = items.reduce((sum, item) => sum + Number(item.thanhTien), 0);

@@ -42,6 +42,7 @@ class SellerProfileController {
             loaiHinhCuaHang: shop.LoaiHinhCuaHang,
             maSoThue: shop.MaSoThue,
             daXacThucPhapLy: shop.DaXacThucPhapLy,
+            trangThai: shop.TrangThai,
             ngayTao: shop.NgayTao
           } : null
         }
@@ -135,7 +136,10 @@ class SellerProfileController {
             ...userData,
             soDienThoai: newPhone
           },
-          shop: shopData
+          shop: {
+            ...shopData,
+            daXacThucPhapLy: false
+          }
         }
       });
     } catch (error) {

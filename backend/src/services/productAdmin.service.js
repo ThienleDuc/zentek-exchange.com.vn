@@ -149,7 +149,8 @@ class ProductAdminService {
       .query(`
         SELECT 
           sp.*,
-          ch.TenCuaHang, ch.Logo, ch.DiaChi as CuaHangDiaChi, ch.LoaiHinhCuaHang,
+          ch.TenCuaHang, ch.Logo, ch.DiaChi as CuaHangDiaChi, ch.LoaiHinhCuaHang, ch.NguoiBanId,
+          ch.TrangThai as CuaHangTrangThai, ch.DaXacThucPhapLy as CuaHangDaXacThucPhapLy,
           dm.TenDanhMuc,
           dmCha.TenDanhMuc as TenDanhMucCha,
           (SELECT COUNT(*) FROM ChiTietGioHang ct WHERE ct.SanPhamId = sp.MaSanPham) as SoLuongGioHangThucTe
@@ -215,6 +216,30 @@ class ProductAdminService {
 
   async updateStatus(id, adminId, status) {
     const pool = await poolPromise;
+    
+    // Check shop status first
+    const shopStatusRes = await pool.request()
+      .input('id', sql.UniqueIdentifier, id)
+      .query(`
+        SELECT ch.TrangThai, ch.DaXacThucPhapLy, ch.TenCuaHang 
+        FROM SanPham sp
+        JOIN CuaHang ch ON sp.CuaHangId = ch.MaCuaHang
+        WHERE sp.MaSanPham = @id
+      `);
+      
+    if (shopStatusRes.recordset.length === 0) {
+      throw new Error('Không tìm thấy sản phẩm');
+    }
+    
+    const shop = shopStatusRes.recordset[0];
+    if (status === 'Đã duyệt') {
+      if (shop.TrangThai === false || shop.TrangThai === 0) {
+        throw new Error(`Cửa hàng "${shop.TenCuaHang}" đã bị khóa. Không thể phê duyệt sản phẩm.`);
+      }
+      if (shop.DaXacThucPhapLy === false || shop.DaXacThucPhapLy === 0) {
+        throw new Error(`Cửa hàng "${shop.TenCuaHang}" chưa được xác thực pháp lý. Không thể phê duyệt sản phẩm.`);
+      }
+    }
     
     let trangThaiHienThi = 1;
     if (status === 'Đã từ chối' || status === 'Đã gỡ') {

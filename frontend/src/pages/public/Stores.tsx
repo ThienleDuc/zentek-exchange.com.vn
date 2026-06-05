@@ -183,6 +183,7 @@ const Stores: React.FC = () => {
   };
   
   const [filters, setFilters] = useState<Filters>(initialFilters);
+  const [searchVal, setSearchVal] = useState(initialFilters.search);
   const [stores, setStores] = useState<Store[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -293,6 +294,7 @@ const Stores: React.FC = () => {
     };
 
     setFilters(newFilters);
+    setSearchVal(urlSearch);
     fetchStores(newFilters);
 
     if (!urlProvince) {
@@ -305,6 +307,17 @@ const Stores: React.FC = () => {
       setWards([]);
     }
   }, [searchParams, fetchStores]);
+
+  // Debounce search input to update searchParams
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      const urlSearch = searchParams.get('search') || '';
+      if (searchVal !== urlSearch) {
+        updateFilter({ search: searchVal, page: 1 });
+      }
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchVal]);
 
   // Hàm thay đổi filter bằng cách cập nhật URL searchParams
   const updateFilter = (newFilter: Partial<Filters>) => {
@@ -451,8 +464,8 @@ const Stores: React.FC = () => {
               <input
                 type="text"
                 placeholder="Tìm theo tên cửa hàng..."
-                value={filters.search}
-                onChange={(e) => updateFilter({ search: e.target.value, page: 1 })}
+                value={searchVal}
+                onChange={(e) => setSearchVal(e.target.value)}
               />
             </div>
             <div className="result-count">

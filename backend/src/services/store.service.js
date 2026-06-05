@@ -154,6 +154,46 @@ class StoreService {
       provinces: result.recordset.map(r => r.TinhThanh)
     };
   }
+
+  async getStoreDetail(storeId) {
+    const pool = await poolPromise;
+    const request = pool.request();
+    request.input('storeId', sql.UniqueIdentifier, storeId);
+
+    const query = `
+      SELECT 
+        ch.MaCuaHang, ch.TenCuaHang, ch.Logo, ch.MoTa, ch.DiaChi, ch.PhuongXa, ch.QuanHuyen, ch.TinhThanh, ch.SoDienThoai, ch.LoaiHinhCuaHang, ch.DaXacThucPhapLy, ch.NgayTao, ch.TrangThai,
+        nd.HoTen as NguoiBanHoTen, nd.MaNguoiDung as NguoiBanId,
+        (SELECT COUNT(*) FROM SanPham WHERE CuaHangId = ch.MaCuaHang AND TrangThaiDuyet = N'Đã duyệt' AND TrangThaiHienThi = 1) as SoSanPham,
+        (SELECT ISNULL(SUM(SoLuongDaBan), 0) FROM SanPham WHERE CuaHangId = ch.MaCuaHang AND TrangThaiDuyet = N'Đã duyệt' AND TrangThaiHienThi = 1) as SoLuongDaBan,
+        (SELECT ISNULL(AVG(CAST(dg.SoSao AS FLOAT)), 0) FROM DanhGiaSanPham dg JOIN SanPham sp ON dg.SanPhamId = sp.MaSanPham WHERE sp.CuaHangId = ch.MaCuaHang) as DiemDanhGia,
+        (SELECT COUNT(*) FROM DanhGiaSanPham dg JOIN SanPham sp ON dg.SanPhamId = sp.MaSanPham WHERE sp.CuaHangId = ch.MaCuaHang) as SoLuongDanhGia
+      FROM CuaHang ch
+      JOIN NguoiDung nd ON ch.NguoiBanId = nd.MaNguoiDung
+      WHERE ch.MaCuaHang = @storeId AND ch.TrangThai = 1 AND nd.DaXoa = 0
+    `;
+
+    const result = await request.query(query);
+    if (result.recordset.length === 0) {
+      throw new Error('Cửa hàng không tồn tại hoặc đã ngừng hoạt động.');
+    }
+
+    const store = result.recordset[0];
+    const mapType = (id) => {
+      if (id === 1) return 'Cá nhân';
+      if (id === 2) return 'Hộ kinh doanh';
+      if (id === 3) return 'Doanh nghiệp nhỏ';
+      return 'Khác';
+    };
+
+    return {
+      success: true,
+      data: {
+        ...store,
+        LoaiHinhTen: mapType(store.LoaiHinhCuaHang)
+      }
+    };
+  }
 }
 
 module.exports = new StoreService();

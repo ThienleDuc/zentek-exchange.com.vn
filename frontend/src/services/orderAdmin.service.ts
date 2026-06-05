@@ -14,6 +14,10 @@ export interface OrderDetailItem {
   shopId: string;
   anh: string | null;
   daDanhGia?: boolean;
+  reviewId?: string | null;
+  reviewSoSao?: number | null;
+  reviewNoiDung?: string | null;
+  reviewTraLoiNoiDung?: string | null;
 }
 
 export interface AdminOrder {
@@ -24,6 +28,7 @@ export interface AdminOrder {
   buyerId: string;
   shopId: string;
   daDanhGia?: boolean;
+  daTraLoi?: boolean;
   hoTenNguoiNhan?: string;
   soDienThoaiNguoiNhan?: string;
   diaChiNhan?: string;

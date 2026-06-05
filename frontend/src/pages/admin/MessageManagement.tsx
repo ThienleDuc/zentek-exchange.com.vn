@@ -25,9 +25,10 @@ const MessageManagement = () => {
   const [isContactSearchOpen, setIsContactSearchOpen] = useState(false);
 
   // Lấy danh sách trò chuyện
-  const fetchConversations = async () => {
+  const fetchConversations = async (overrideFilter?: 'all' | 'individual' | 'group' | 'store') => {
     try {
-      const data = await chatAdminService.getConversations(filter);
+      const activeFilter = overrideFilter || filter;
+      const data = await chatAdminService.getConversations(activeFilter);
       setConversations(data);
       return data;
     } catch (error) {
@@ -200,6 +201,12 @@ const MessageManagement = () => {
         onOpenCreateGroup={() => setIsCreateGroupModalOpen(true)}
         onOpenJoinGroup={() => setIsJoinGroupModalOpen(true)}
         onOpenContactSearch={() => setIsContactSearchOpen(true)}
+        onRefreshConversations={(overrideFilter) => {
+          if (overrideFilter) {
+            setFilter(overrideFilter);
+          }
+          fetchConversations(overrideFilter);
+        }}
       />
       <ChatBox 
         activeConversation={activeConversation}
@@ -217,23 +224,30 @@ const MessageManagement = () => {
       <CreateGroupModal 
         isOpen={isCreateGroupModalOpen}
         onClose={() => setIsCreateGroupModalOpen(false)}
-        onSuccess={() => {
-          fetchConversations();
-          // Tuỳ chọn: có thể setActiveChatId(idMoi) nếu API trả về, nhưng hàm onSuccess() hiện tại không trả tham số.
+        onSuccess={(newGroupId) => {
+          setFilter('group');
+          fetchConversations('group');
+          setActiveChatId(newGroupId);
         }}
       />
       <JoinGroupModal
         isOpen={isJoinGroupModalOpen}
         onClose={() => setIsJoinGroupModalOpen(false)}
         onSuccess={(groupId) => {
-          fetchConversations();
+          setFilter('group');
+          fetchConversations('group');
           setActiveChatId(groupId);
         }}
       />
       <ContactSearchModal
         isOpen={isContactSearchOpen}
         onClose={() => setIsContactSearchOpen(false)}
-        onContactCreated={(convId: string) => { setActiveChatId(convId); fetchConversations(); setIsContactSearchOpen(false); }}
+        onContactCreated={(convId: string) => { 
+          setFilter('all');
+          fetchConversations('all');
+          setActiveChatId(convId); 
+          setIsContactSearchOpen(false); 
+        }}
       />
     </div>
   );

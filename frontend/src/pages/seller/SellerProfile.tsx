@@ -108,6 +108,9 @@ const SellerProfile: React.FC = () => {
             });
             window.dispatchEvent(new CustomEvent('user-updated'));
           }
+          if (response.data?.shop) {
+            setShop(response.data.shop);
+          }
           alert('Cập nhật ảnh đại diện thành công!');
         } else {
           alert(response.message || 'Cập nhật ảnh đại diện thất bại.');
@@ -139,7 +142,11 @@ const SellerProfile: React.FC = () => {
           shop: updatedShop
         });
         if (response.success) {
-          setShop(updatedShop);
+          if (response.data?.shop) {
+            setShop(response.data.shop);
+          } else {
+            setShop(updatedShop);
+          }
           setLogoFile(null);
           alert('Cập nhật logo cửa hàng thành công!');
         } else {
@@ -224,6 +231,9 @@ const SellerProfile: React.FC = () => {
             avatar: user.anhDaiDien || undefined
           });
           window.dispatchEvent(new CustomEvent('user-updated'));
+        }
+        if (response.data?.shop) {
+          setShop(response.data.shop);
         }
         alert('Cập nhật thành công!');
       } else {

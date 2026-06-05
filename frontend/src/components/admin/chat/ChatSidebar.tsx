@@ -20,6 +20,7 @@ interface ChatSidebarProps {
   onOpenCreateGroup: () => void;
   onOpenJoinGroup: () => void;
   onOpenContactSearch?: () => void;
+  onRefreshConversations?: (overrideFilter?: FilterType) => void;
 }
 
 const ChatSidebar = ({
@@ -33,6 +34,7 @@ const ChatSidebar = ({
   onOpenCreateGroup,
   onOpenJoinGroup,
   onOpenContactSearch,
+  onRefreshConversations,
 }: ChatSidebarProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -63,8 +65,12 @@ const ChatSidebar = ({
       if (res.success) {
         setLocalJoined(true);
         alert(res.message);
-        // Không cần reload - setLocalJoined(true) đã ẩn card gợi ý.
-        // Danh sách cuộc trò chuyện sẽ cập nhật khi component mount lại.
+        if (onRefreshConversations) {
+          onRefreshConversations('group');
+        }
+        if (res.data?.groupId) {
+          onSelectChat(res.data.groupId);
+        }
       }
     } catch (error: any) {
       alert(error?.response?.data?.message || 'Có lỗi xảy ra khi tham gia');

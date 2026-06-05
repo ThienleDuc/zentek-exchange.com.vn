@@ -7,7 +7,7 @@ import { getUserAvatarUrl } from '../../../utils/image.utils';
 interface CreateGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (groupId: string) => void;
 }
 
 const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose, onSuccess }) => {
@@ -67,8 +67,8 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose, on
 
     setIsCreating(true);
     try {
-      await chatAdminService.createGroup(groupName, selectedUsers.map(u => u.id));
-      onSuccess();
+      const newGroup = await chatAdminService.createGroup(groupName, selectedUsers.map(u => u.id));
+      onSuccess(newGroup.id);
       onClose();
     } catch (error) {
       console.error('Lỗi tạo nhóm:', error);
